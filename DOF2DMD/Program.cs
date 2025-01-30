@@ -374,157 +374,157 @@ namespace DOF2DMD
         /// Displays an image or video file on the DMD device using native FlexDMD capabilities.
         /// </summary>
         private static Task? _currentDisplayTask;
-private static CancellationTokenSource? _cancellationTokenSource;
-private static readonly object _lock = new object();
-
-public static bool DisplayPicture(string path, float duration, string animation, bool forceOverride = true)
-{
-    try
-    {
-        if (string.IsNullOrEmpty(path))
-            return false;
-
-        // Validate file path and existence
-        string localPath;
-        localPath = HttpUtility.UrlDecode(
-            Path.IsPathRooted(path)
-                ? Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path))
-                : Path.Combine(AppSettings.artworkPath, 
-                    Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path)))
-        );
-
-        // List of possible extensions in order of priority
-        List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
-
-        // First try exact match
-        if (!FileExistsWithExtensions(localPath, extensions, out string foundExtension))
+        private static CancellationTokenSource? _cancellationTokenSource;
+        private static readonly object _lock = new object();
+        
+        public static bool DisplayPicture(string path, float duration, string animation, bool forceOverride = true)
         {
-            LogIt($"Exact match not found: {localPath}, looking for similar files...");
-            var matchedFile = FindBestFuzzyMatch(localPath, extensions);
-            if (!string.IsNullOrEmpty(matchedFile))
+            try
             {
-                LogIt($"Found similar file: {matchedFile} instead of {localPath}");
-                localPath = Path.Combine(
-                    Path.GetDirectoryName(matchedFile),
-                    Path.GetFileNameWithoutExtension(matchedFile)
+                if (string.IsNullOrEmpty(path))
+                    return false;
+        
+                // Validate file path and existence
+                string localPath;
+                localPath = HttpUtility.UrlDecode(
+                    Path.IsPathRooted(path)
+                        ? Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path))
+                        : Path.Combine(AppSettings.artworkPath, 
+                            Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path)))
                 );
-                foundExtension = Path.GetExtension(matchedFile);
+        
+                // List of possible extensions in order of priority
+                List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
+        
+                // First try exact match
+                if (!FileExistsWithExtensions(localPath, extensions, out string foundExtension))
+                {
+                    LogIt($"Exact match not found: {localPath}, looking for similar files...");
+                    var matchedFile = FindBestFuzzyMatch(localPath, extensions);
+                    if (!string.IsNullOrEmpty(matchedFile))
+                    {
+                        LogIt($"Found similar file: {matchedFile} instead of {localPath}");
+                        localPath = Path.Combine(
+                            Path.GetDirectoryName(matchedFile),
+                            Path.GetFileNameWithoutExtension(matchedFile)
+                        );
+                        foundExtension = Path.GetExtension(matchedFile);
+                    }
+                    else
+                    {
+                        LogIt($"❗ Picture not found {localPath}");
+                        return false;
+                    }
+                }
+                else 
+                {
+                    LogIt($"Found exact match: {localPath}");
+                }
+        
+                string fullPath = localPath + foundExtension;
+                bool isVideo = new List<string> { ".gif", ".avi", ".mp4" }.Contains(foundExtension.ToLower());
+                bool isImage = new List<string> { ".png", ".jpg", ".bmp" }.Contains(foundExtension.ToLower());
+        
+                if (!isVideo && !isImage)
+                {
+                    return false;
+                }
+        
+                lock (_lock)
+                {
+                    // If a task is running, wait or cancel depends on ForceOverride
+                    if (_currentDisplayTask != null && !_currentDisplayTask.IsCompleted)
+                    {
+                        if (!forceOverride)
+                        {
+                            _currentDisplayTask.Wait();
+                        }
+                        else
+                        {
+                            _cancellationTokenSource?.Cancel();
+                        }
+                    }
+        
+                    _cancellationTokenSource = new CancellationTokenSource();
+                    var token = _cancellationTokenSource.Token;
+        
+                    _currentDisplayTask = Task.Run(() =>
+                    {
+                        try
+                        {
+                            // Check if gDmdDevice is initialized
+                            int retries = 10;
+                            while (gDmdDevice == null && retries > 0)
+                            {
+                                Thread.Sleep(1000);
+                                LogIt($"Retrying DMD device initialization {retries} retries left");
+                                retries--;
+                            }
+        
+                            if (gDmdDevice == null)
+                            {
+                                LogIt("DMD device initialization failed after 10 retries");
+                                return;
+                            }
+        
+                            gDmdDevice.Post(() =>
+                            {
+                                gDmdDevice.Clear = true;
+        
+                                // Clear existing resources
+                                if (_queue.ChildCount >= 1)
+                                {
+                                    _queue.RemoveAllScenes();
+                                }
+        
+                                gDmdDevice.Graphics.Clear(Color.Black);
+                                _scoreBoard.Visible = false;
+                                Actor mediaActor = isVideo ? 
+                                    (Actor)gDmdDevice.NewVideo("MyVideo", fullPath) : 
+                                    (Actor)gDmdDevice.NewImage("MyImage", fullPath);
+                                mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
+        
+                                // Only process if not a fixed duration (-1)
+                                if (duration > -1)
+                                {
+                                    duration = (isVideo && duration == 0) ? ((AnimatedActor)mediaActor).Length :
+                                               (isImage && duration == 0) ? -1 : duration;
+                                    
+                                    if (isVideo)
+                                    {
+                                        // Arm timer to restore to score, once animation is done playing
+                                        _animationTimer?.Dispose();
+                                        _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 250, Timeout.Infinite);
+                                    }
+                                }
+        
+                                BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration);
+        
+                                _queue.Visible = true;
+                                _queue.Enqueue(bg);
+                            });
+        
+                            LogIt($"📷 Rendering {(isVideo ? "video" : "image")}: {fullPath}");
+        
+                            // Wait duration time or cancel
+                            Task.Delay((int)(duration * 1000), token).Wait();
+        
+                        }
+                        catch (TaskCanceledException)
+                        {
+                            LogIt($"⏹️ Display interrupted for: {fullPath}");
+                        }
+                    }, token);
+                }
+        
+                return true;
             }
-            else
+            catch (Exception ex)
             {
-                LogIt($"❗ Picture not found {localPath}");
+                LogIt($"Error occurred while fetching the image. {ex.Message}");
                 return false;
             }
         }
-        else 
-        {
-            LogIt($"Found exact match: {localPath}");
-        }
-
-        string fullPath = localPath + foundExtension;
-        bool isVideo = new List<string> { ".gif", ".avi", ".mp4" }.Contains(foundExtension.ToLower());
-        bool isImage = new List<string> { ".png", ".jpg", ".bmp" }.Contains(foundExtension.ToLower());
-
-        if (!isVideo && !isImage)
-        {
-            return false;
-        }
-
-        lock (_lock)
-        {
-            // Si ya hay una tarea en ejecución, esperar o cancelar según sea necesario
-            if (_currentDisplayTask != null && !_currentDisplayTask.IsCompleted)
-            {
-                if (!forceOverride)
-                {
-                    _currentDisplayTask.Wait();
-                }
-                else
-                {
-                    _cancellationTokenSource?.Cancel();
-                }
-            }
-
-            _cancellationTokenSource = new CancellationTokenSource();
-            var token = _cancellationTokenSource.Token;
-
-            _currentDisplayTask = Task.Run(() =>
-            {
-                try
-                {
-                    // Check if gDmdDevice is initialized
-                    int retries = 10;
-                    while (gDmdDevice == null && retries > 0)
-                    {
-                        Thread.Sleep(1000);
-                        LogIt($"Retrying DMD device initialization {retries} retries left");
-                        retries--;
-                    }
-
-                    if (gDmdDevice == null)
-                    {
-                        LogIt("DMD device initialization failed after 10 retries");
-                        return;
-                    }
-
-                    gDmdDevice.Post(() =>
-                    {
-                        gDmdDevice.Clear = true;
-
-                        // Clear existing resources
-                        if (_queue.ChildCount >= 1)
-                        {
-                            _queue.RemoveAllScenes();
-                        }
-
-                        gDmdDevice.Graphics.Clear(Color.Black);
-                        _scoreBoard.Visible = false;
-                        Actor mediaActor = isVideo ? 
-                            (Actor)gDmdDevice.NewVideo("MyVideo", fullPath) : 
-                            (Actor)gDmdDevice.NewImage("MyImage", fullPath);
-                        mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
-
-                        // Only process if not a fixed duration (-1)
-                        if (duration > -1)
-                        {
-                            duration = (isVideo && duration == 0) ? ((AnimatedActor)mediaActor).Length :
-                                       (isImage && duration == 0) ? -1 : duration;
-                            
-                            if (isVideo)
-                            {
-                                // Arm timer to restore to score, once animation is done playing
-                                _animationTimer?.Dispose();
-                                _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 250, Timeout.Infinite);
-                            }
-                        }
-
-                        BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration);
-
-                        _queue.Visible = true;
-                        _queue.Enqueue(bg);
-                    });
-
-                    LogIt($"📷 Rendering {(isVideo ? "video" : "image")}: {fullPath}");
-
-                    // Espera el tiempo de duración o hasta que se cancele
-                    Task.Delay((int)(duration * 1000), token).Wait();
-
-                }
-                catch (TaskCanceledException)
-                {
-                    LogIt($"⏹️ Display interrupted for: {fullPath}");
-                }
-            }, token);
-        }
-
-        return true;
-    }
-    catch (Exception ex)
-    {
-        LogIt($"Error occurred while fetching the image. {ex.Message}");
-        return false;
-    }
-}
         
 
 
@@ -1004,12 +1004,16 @@ public static bool DisplayPicture(string path, float duration, string animation,
                                     //[url_prefix]/v1/display/picture?path=<image or video path>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&fixed=<true|false>&forceoverride=<true|false>
                                     string picturepath = query.Get("path");
                                     string pFixed = query.Get("fixed") ?? "false";
-                                    string pForceOverride = query.Get("forceoverride") ?? "true";
                                     float pictureduration = float.TryParse(query.Get("duration"), out float result) ? result : 0.0f;
                                     string pictureanimation = query.Get("animation") ?? "none";
                                     if (StringComparer.OrdinalIgnoreCase.Compare(pFixed, "true") == 0)
                                     {
                                         pictureduration = -1.0f;
+                                    }
+                                    bool pForceOverride;
+                                    if (!bool.TryParse(query.Get("forceoverride"), out pForceOverride))
+                                    {
+                                        pForceOverride = true; // default value if conversion fails
                                     }
                                     if ((query.Count == 2) && (pictureduration == -1.0f))
                                     {
@@ -1042,12 +1046,12 @@ public static bool DisplayPicture(string path, float duration, string animation,
                                     bool cleanbg;
                                     if (!bool.TryParse(query.Get("cleanbg"), out cleanbg))
                                     {
-                                        cleanbg = true; // valor predeterminado si la conversión falla
+                                        cleanbg = true; // default value if conversion fails
                                     } 
                                     bool loop;
                                     if (!bool.TryParse(query.Get("loop"), out loop))
                                     {
-                                        loop = false; // valor predeterminado si la conversión falla
+                                        loop = false; // default value if conversion fails
                                     }
 
                                     if (!DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop))
@@ -1070,7 +1074,7 @@ public static bool DisplayPicture(string path, float duration, string animation,
                                     bool advcleanbg;
                                     if (!bool.TryParse(query.Get("cleanbg"), out advcleanbg))
                                     {
-                                        cleanbg = true; // valor predeterminado si la conversión falla
+                                        cleanbg = true; // default value if conversion fails
                                     }
 
                                     if (!AdvancedDisplay(advtext, advpath, advsize, advcolor, advfont, advbordercolor, advbordersize, advcleanbg, animationIn, animationOut, advtextduration))
@@ -1087,7 +1091,7 @@ public static bool DisplayPicture(string path, float duration, string animation,
                                     bool sCleanbg;
                                     if (!bool.TryParse(query.Get("cleanbg"), out sCleanbg))
                                     {
-                                        sCleanbg = true; // valor predeterminado si la conversión falla
+                                        sCleanbg = true; // default value if conversion fails
                                     }
 
                                     if (!DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], sCleanbg, gCredits))
