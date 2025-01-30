@@ -373,61 +373,84 @@ namespace DOF2DMD
         /// <summary>
         /// Displays an image or video file on the DMD device using native FlexDMD capabilities.
         /// </summary>
-        public static bool DisplayPicture(string path, float duration, string animation)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(path))
-                    return false;
-        
-                // Validate file path and existence
-                string localPath;
-                localPath = HttpUtility.UrlDecode(
-                    Path.IsPathRooted(path)
-                        ? Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path))
-                        : Path.Combine(AppSettings.artworkPath, 
-                            Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path)))
-                );
+        private static Task? _currentDisplayTask;
+private static CancellationTokenSource? _cancellationTokenSource;
+private static readonly object _lock = new object();
 
-                // List of possible extensions in order of priority
-                List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
-        
-                // First try exact match
-                if (!FileExistsWithExtensions(localPath, extensions, out string foundExtension))
+public static bool DisplayPicture(string path, float duration, string animation, bool forceOverride = false)
+{
+    try
+    {
+        if (string.IsNullOrEmpty(path))
+            return false;
+
+        // Validate file path and existence
+        string localPath;
+        localPath = HttpUtility.UrlDecode(
+            Path.IsPathRooted(path)
+                ? Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path))
+                : Path.Combine(AppSettings.artworkPath, 
+                    Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path)))
+        );
+
+        // List of possible extensions in order of priority
+        List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
+
+        // First try exact match
+        if (!FileExistsWithExtensions(localPath, extensions, out string foundExtension))
+        {
+            LogIt($"Exact match not found: {localPath}, looking for similar files...");
+            var matchedFile = FindBestFuzzyMatch(localPath, extensions);
+            if (!string.IsNullOrEmpty(matchedFile))
+            {
+                LogIt($"Found similar file: {matchedFile} instead of {localPath}");
+                localPath = Path.Combine(
+                    Path.GetDirectoryName(matchedFile),
+                    Path.GetFileNameWithoutExtension(matchedFile)
+                );
+                foundExtension = Path.GetExtension(matchedFile);
+            }
+            else
+            {
+                LogIt($"❗ Picture not found {localPath}");
+                return false;
+            }
+        }
+        else 
+        {
+            LogIt($"Found exact match: {localPath}");
+        }
+
+        string fullPath = localPath + foundExtension;
+        bool isVideo = new List<string> { ".gif", ".avi", ".mp4" }.Contains(foundExtension.ToLower());
+        bool isImage = new List<string> { ".png", ".jpg", ".bmp" }.Contains(foundExtension.ToLower());
+
+        if (!isVideo && !isImage)
+        {
+            return false;
+        }
+
+        lock (_lock)
+        {
+            // Si ya hay una tarea en ejecución, esperar o cancelar según sea necesario
+            if (_currentDisplayTask != null && !_currentDisplayTask.IsCompleted)
+            {
+                if (!forceOverride)
                 {
-                    LogIt($"Exact match not found: {localPath}, looking for similar files...");
-                    var matchedFile = FindBestFuzzyMatch(localPath, extensions);
-                    if (!string.IsNullOrEmpty(matchedFile))
-                    {
-                        LogIt($"Found similar file: {matchedFile} instead of {localPath}");
-                        localPath = Path.Combine(
-                            Path.GetDirectoryName(matchedFile),
-                            Path.GetFileNameWithoutExtension(matchedFile)
-                        );
-                        foundExtension = Path.GetExtension(matchedFile);
-                    }
-                    else
-                    {
-                        LogIt($"❗ Picture not found {localPath}");
-                        return false;
-                    }
+                    _currentDisplayTask.Wait();
                 }
-                else 
+                else
                 {
-                    LogIt($"Found exact match: {localPath}");
+                    _cancellationTokenSource?.Cancel();
                 }
-        
-                string fullPath = localPath + foundExtension;
-                bool isVideo = new List<string> { ".gif", ".avi", ".mp4" }.Contains(foundExtension.ToLower());
-                bool isImage = new List<string> { ".png", ".jpg", ".bmp" }.Contains(foundExtension.ToLower());
-        
-                if (!isVideo && !isImage)
-                {
-                    return false;
-                }
-        
-                // Now that we've validated everything, process the display asynchronously
-                _ = Task.Run(() =>
+            }
+
+            _cancellationTokenSource = new CancellationTokenSource();
+            var token = _cancellationTokenSource.Token;
+
+            _currentDisplayTask = Task.Run(() =>
+            {
+                try
                 {
                     // Check if gDmdDevice is initialized
                     int retries = 10;
@@ -440,32 +463,30 @@ namespace DOF2DMD
 
                     if (gDmdDevice == null)
                     {
-                        LogIt("DMD device initialization failed 10 retries");
+                        LogIt("DMD device initialization failed after 10 retries");
                         return;
                     }
 
                     gDmdDevice.Post(() =>
                     {
                         gDmdDevice.Clear = true;
-        
+
                         // Clear existing resources
                         if (_queue.ChildCount >= 1)
                         {
                             _queue.RemoveAllScenes();
                         }
-        
+
                         gDmdDevice.Graphics.Clear(Color.Black);
                         _scoreBoard.Visible = false;
                         Actor mediaActor = isVideo ? 
                             (Actor)gDmdDevice.NewVideo("MyVideo", fullPath) : 
                             (Actor)gDmdDevice.NewImage("MyImage", fullPath);
                         mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
-        
+
                         // Only process if not a fixed duration (-1)
                         if (duration > -1)
                         {
-                            // Adjust duration for videos and images if not explicitly set
-                            // For image, set duration to infinite (-1)
                             duration = (isVideo && duration == 0) ? ((AnimatedActor)mediaActor).Length :
                                        (isImage && duration == 0) ? -1 : duration;
                             
@@ -476,25 +497,34 @@ namespace DOF2DMD
                                 _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 250, Timeout.Infinite);
                             }
                         }
-        
+
                         BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration);
-        
+
                         _queue.Visible = true;
                         _queue.Enqueue(bg);
                     });
-        
-                    LogIt($"📷Rendering {(isVideo ? "video" : "image")}: {fullPath}");
-                });
-        
-                // Return true immediately after validation, while display processing continues in background
-                return true;
-            }
-            catch (Exception ex)
-            {
-                LogIt($"Error occurred while fetching the image. {ex.Message}");
-                return false;
-            }
+
+                    LogIt($"📷 Rendering {(isVideo ? "video" : "image")}: {fullPath}");
+
+                    // Espera el tiempo de duración o hasta que se cancele
+                    Task.Delay((int)(duration * 1000), token).Wait();
+
+                }
+                catch (TaskCanceledException)
+                {
+                    LogIt($"⏹️ Display interrupted for: {fullPath}");
+                }
+            }, token);
         }
+
+        return true;
+    }
+    catch (Exception ex)
+    {
+        LogIt($"Error occurred while fetching the image. {ex.Message}");
+        return false;
+    }
+}
         
 
 
