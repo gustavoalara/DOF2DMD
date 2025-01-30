@@ -377,7 +377,7 @@ namespace DOF2DMD
 private static CancellationTokenSource? _cancellationTokenSource;
 private static readonly object _lock = new object();
 
-public static bool DisplayPicture(string path, float duration, string animation, bool forceOverride = false)
+public static bool DisplayPicture(string path, float duration, string animation, bool forceOverride = true)
 {
     try
     {
@@ -1001,9 +1001,10 @@ public static bool DisplayPicture(string path, float duration, string animation,
                             switch (urlParts[3])
                             {
                                 case "picture":
-                                    //[url_prefix]/v1/display/picture?path=<image or video path>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&fixed=<true|false>
+                                    //[url_prefix]/v1/display/picture?path=<image or video path>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&fixed=<true|false>&forceoverride=<true|false>
                                     string picturepath = query.Get("path");
                                     string pFixed = query.Get("fixed") ?? "false";
+                                    string pForceOverride = query.Get("forceoverride") ?? "true";
                                     float pictureduration = float.TryParse(query.Get("duration"), out float result) ? result : 0.0f;
                                     string pictureanimation = query.Get("animation") ?? "none";
                                     if (StringComparer.OrdinalIgnoreCase.Compare(pFixed, "true") == 0)
@@ -1022,7 +1023,7 @@ public static bool DisplayPicture(string path, float duration, string animation,
                                         for (int i = 1; i <= 4; i++)
                                             gScore[i] = 0;
                                     }
-                                    bool success = DisplayPicture(picturepath, pictureduration, pictureanimation);
+                                    bool success = DisplayPicture(picturepath, pictureduration, pictureanimation, pForceOverride);
                                     if (!success)
                                     {
                                         sReturn = $"Picture or video not found: {picturepath}";
