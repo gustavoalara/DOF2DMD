@@ -324,8 +324,8 @@ namespace DOF2DMD
             public static ushort dmdHeight => ushort.Parse(_configuration["dmd_height"] ?? "32");
             public static string StartPicture => _configuration["start_picture"] ?? "DOF2DMD";
             public static string hi2txt_enabled => _configuration["hi2txt_enabled"] ?? "no";
-            public static string hi2txt_path => _configuration["hi2txt_path"] ?? "c:\hi2txt";
-            public static string mame_path => _configuration["mame_path"] ?? "c:\mame";
+            public static string hi2txt_path => _configuration["hi2txt_path"] ?? "c:\\hi2txt";
+            public static string mame_path => _configuration["mame_path"] ?? "c:\\mame";
         }
 
         /// <summary>
