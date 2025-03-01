@@ -323,7 +323,7 @@ namespace DOF2DMD
             public static ushort dmdWidth => ushort.Parse(_configuration["dmd_width"] ?? "128");
             public static ushort dmdHeight => ushort.Parse(_configuration["dmd_height"] ?? "32");
             public static string StartPicture => _configuration["start_picture"] ?? "DOF2DMD";
-            public static string hi2txt_enabled => _configuration["hi2txt_enabled"] ?? "no";
+            public static bool hi2txt_enabled => _configuration["hi2txt_enabled"] ?? "no";
             public static string hi2txt_path => _configuration["hi2txt_path"] ?? "c:\\hi2txt";
             public static string mame_path => _configuration["mame_path"] ?? "c:\\mame";
         }
@@ -1276,7 +1276,7 @@ namespace DOF2DMD
                                     }
                                     break;
                                 case "highscores":
-                                    if (!AppSettings.hi2txt_path)
+                                    if (!AppSettings.hi2txt_enabled)
                                     {
                                         LogIt($"Highscores is not enabled");
                                         break;
@@ -1296,7 +1296,7 @@ namespace DOF2DMD
                                         hcleanbg = true; // valor predeterminado si la conversión falla
                                     }
                                     bool hloop;
-                                    if (!hbool.TryParse(query.Get("loop"), out hloop))
+                                    if (!bool.TryParse(query.Get("loop"), out hloop))
                                     {
                                         hloop = false; // valor predeterminado si la conversión falla
                                     }
