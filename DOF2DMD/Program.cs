@@ -656,7 +656,8 @@ namespace DOF2DMD
             // Construir la ruta completa del ejecutable y el archivo de highscore
             string hi2txtExe = System.IO.Path.Combine(AppSettings.hi2txt_path, "Hi2Txt.exe");
             string hiscoreFile = System.IO.Path.Combine(AppSettings.mame_path, "hiscore", $"{game}");
-    
+            LogIt($"Hi2txt set to {hi2txtExe}");
+            LogIt($"Game highscore file set to {hiscoreFile}");
             // Verificar si los archivos existen antes de ejecutar
             if (!System.IO.File.Exists(hi2txtExe))
             {
