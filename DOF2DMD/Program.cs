@@ -654,8 +654,8 @@ namespace DOF2DMD
         public static bool DisplayHighscores(string game, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animation, float duration, bool loop)
         {
             // Construir la ruta completa del ejecutable y el archivo de highscore
-            string hi2txtExe = System.IO.Path.Combine(hi2txt_path, "Hi2Txt.exe");
-            string hiscoreFile = System.IO.Path.Combine(mame_path, "hiscore", $"{game}");
+            string hi2txtExe = System.IO.Path.Combine({AppSettings.hi2txt_path}, "Hi2Txt.exe");
+            string hiscoreFile = System.IO.Path.Combine({AppSettings.mame_path}, "hiscore", $"{game}");
     
             // Verificar si los archivos existen antes de ejecutar
             if (!System.IO.File.Exists(hi2txtExe))
@@ -682,7 +682,7 @@ namespace DOF2DMD
     
             try
             {
-                using (Process process = Process.Start(psi))
+                using (System.Diagnostics.Process process = System.Diagnostics.Process.Start(psi))
                 {
                     if (process == null)
                     {
@@ -1276,7 +1276,7 @@ namespace DOF2DMD
                                     }
                                     break;
                                 case "highscores":
-                                    if (!hi2txt_enabled)
+                                    if (!{AppSettings.hi2txt_path})
                                     {
                                         LogIt($"Highscores is not enabled");
                                         break;
@@ -1295,8 +1295,8 @@ namespace DOF2DMD
                                     {
                                         hcleanbg = true; // valor predeterminado si la conversión falla
                                     }
-                                    bool loop;
-                                    if (!bool.TryParse(query.Get("loop"), out hloop))
+                                    bool hloop;
+                                    if (!hbool.TryParse(query.Get("loop"), out hloop))
                                     {
                                         hloop = false; // valor predeterminado si la conversión falla
                                     }
