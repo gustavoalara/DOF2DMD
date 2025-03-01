@@ -205,8 +205,8 @@ namespace DOF2DMD
                 fontConfig = new[]
                 {
                     new { Path = "FlexDMD.Resources.udmd-f4by5.fnt", ForeColor = grayColor },
-                    new { Path = "FlexDMD.Resources.udmd-f7by13.fnt", ForeColor = grayColor },
-                    new { Path = "FlexDMD.Resources.udmd-f12by24.fnt", ForeColor = Color.Orange }
+                    new { Path = "FlexDMD.Resources.udmd-f5by7.fnt", ForeColor = grayColor },
+                    new { Path = "FlexDMD.Resources.udmd-f6by12.fnt", ForeColor = Color.Orange }
                 };
             }
             return (
@@ -323,6 +323,9 @@ namespace DOF2DMD
             public static ushort dmdWidth => ushort.Parse(_configuration["dmd_width"] ?? "128");
             public static ushort dmdHeight => ushort.Parse(_configuration["dmd_height"] ?? "32");
             public static string StartPicture => _configuration["start_picture"] ?? "DOF2DMD";
+            public static string hi2txt_enabled => _configuration["hi2txt_enabled"] ?? "no";
+            public static string hi2txt_path => _configuration["hi2txt_path"] ?? "c:\hi2txt";
+            public static string mame_path => _configuration["mame_path"] ?? "c:\mame";
         }
 
         /// <summary>
@@ -644,7 +647,68 @@ namespace DOF2DMD
                 _ => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, "")
             };
         }
-
+        /// <summary>
+        /// Displays Highscores on the DMD device.
+        /// %0A or | for line break
+        /// </summary>
+        public static bool DisplayHighscores(string game, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animation, float duration, bool loop)
+        {
+            // Construir la ruta completa del ejecutable y el archivo de highscore
+            string hi2txtExe = System.IO.Path.Combine(hi2txt_path, "Hi2Txt.exe");
+            string hiscoreFile = System.IO.Path.Combine(mame_path, "hiscore", $"{game}");
+    
+            // Verificar si los archivos existen antes de ejecutar
+            if (!System.IO.File.Exists(hi2txtExe))
+            {
+                LogIt($"Error: No Hi2Txt.exe found in the path specified.");
+                return false;
+            }
+    
+            if (!System.IO.File.Exists(hiscoreFile))
+            {
+                LogIt($"Error: No highscore file found for {game}.");
+                return false;
+            }
+    
+            // Crear el proceso para ejecutar Hi2Txt
+            ProcessStartInfo psi = new ProcessStartInfo
+            {
+                FileName = hi2txtExe,
+                Arguments = $"-r -keep-field \"NAME\" -keep-field \"RANK\" -keep-field \"SCORE\" -keep-first-table \"yes\" \"{hiscoreFile}\"",
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+    
+            try
+            {
+                using (Process process = Process.Start(psi))
+                {
+                    if (process == null)
+                    {
+                        LogIt($"Error: Hi2Txt can't be started.");
+                        return false;
+                    }
+    
+                    // Leer y procesar la salida
+                    string output = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit();
+    
+                    // Reemplazar '|' por ' - ' en toda la salida antes de unir las líneas
+                    string formattedOutput = string.Join("|", output.Replace("|", " - ").Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)) + "|";
+    
+                    DisplayText(formattedOutput, size, color, font, bordercolor, bordersize, cleanbg, animation, duration,loop);
+                    
+                }
+    
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LogIt($"Error at start Hi2Txt: {ex.Message}");
+                return false;
+            }
+        }
         /// <summary>
         /// Displays text on the DMD device.
         /// %0A or | for line break
@@ -1209,6 +1273,37 @@ namespace DOF2DMD
                                     if (!DisplayScoreBackground(scorebgpath))
                                     {
                                         sReturn = "Error when displaying score board background";
+                                    }
+                                    break;
+                                case "highscores":
+                                    if (!hi2txt_enabled)
+                                    {
+                                        LogIt($"Highscores is not enabled");
+                                        break;
+                                    }
+                                    string hgame = query.Get("game") ?? "";
+                                    string hsize = query.Get("size") ?? "M";
+                                    string hcolor = query.Get("color") ?? "FFFFFF";
+                                    string hfont = query.Get("font") ?? "Consolas";
+                                    string hbordercolor = query.Get("bordercolor") ?? "000000";
+                                    string hbordersize = query.Get("bordersize") ?? "0";
+                                    string hanimation = query.Get("animation") ?? "ScrollUp";
+                                    float hduration = float.TryParse(query.Get("duration"), out float hresult) ? hresult : 15.0f;
+                                    LogIt($"Highscore is now set to game {hgame} with size {hsize}, color {hcolor}, font {hfont}, border color {hbordercolor}, border size {hbordersize}, animation {hanimation} with a duration of {hduration} seconds");
+                                    bool hcleanbg;
+                                    if (!bool.TryParse(query.Get("cleanbg"), out hcleanbg))
+                                    {
+                                        hcleanbg = true; // valor predeterminado si la conversión falla
+                                    }
+                                    bool loop;
+                                    if (!bool.TryParse(query.Get("loop"), out hloop))
+                                    {
+                                        hloop = false; // valor predeterminado si la conversión falla
+                                    }
+
+                                    if (!DisplayHighscores(hgame, hsize, hcolor, hfont, hbordercolor, hbordersize, hcleanbg, hanimation, hduration, hloop))
+                                    {
+                                        sReturn = "Error when displaying highscores";
                                     }
                                     break;
                                 default:
