@@ -1334,7 +1334,7 @@ namespace DOF2DMD
                                     string hcolor = query.Get("color") ?? "FFFFFF";
                                     string hfont = query.Get("font") ?? "Consolas";
                                     string hbordercolor = query.Get("bordercolor") ?? "000000";
-                                    int hbordersize = int.TryParse(query.Get("bordersize"), out float bresult) ? bresult : 0;
+                                    int hbordersize = int.TryParse(query.Get("bordersize"), out int hbresult) ? hbresult : 0;
                                     string hanimation = query.Get("animation") ?? "ScrollUp";
                                     float hduration = float.TryParse(query.Get("duration"), out float hresult) ? hresult : 15.0f;
                                     LogIt($"Highscore is now set to game {hgame} with size {hsize}, color {hcolor}, font {hfont}, border color {hbordercolor}, border size {hbordersize}, animation {hanimation} with a duration of {hduration} seconds");
