@@ -697,7 +697,7 @@ namespace DOF2DMD
     
                     // Reemplazar '|' por ' - ' en toda la salida antes de unir las líneas
                     string formattedOutput = string.Join("|", output.Replace("|", " - ").Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)) + "|";
-    
+                    
                     DisplayText(formattedOutput, size, color, font, bordercolor, bordersize, cleanbg, animation, duration,loop);
                     
                 }
@@ -760,7 +760,7 @@ namespace DOF2DMD
                         _animationTimer?.Dispose();
                         _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
                     }
-
+                    _currentDuration = duration;
                     // Create background scene based on animation type
                     BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), currentActor, text, myFont, duration);
 
