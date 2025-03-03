@@ -694,7 +694,7 @@ namespace DOF2DMD
         /// Displays Highscores on the DMD device.
         /// %0A or | for line break
         /// </summary>
-        public static bool DisplayHighscores(string game, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animation, float duration, bool loop)
+        public static bool DisplayHighscores(string game, string size, string color, string font, string bordercolor, int bordersize, bool cleanbg, string animation, float duration, bool loop)
         {
             // Construir la ruta completa del ejecutable y el archivo de highscore
             string hi2txtExe = System.IO.Path.Combine(AppSettings.hi2txt_path, "Hi2Txt.exe");
@@ -1334,7 +1334,7 @@ namespace DOF2DMD
                                     string hcolor = query.Get("color") ?? "FFFFFF";
                                     string hfont = query.Get("font") ?? "Consolas";
                                     string hbordercolor = query.Get("bordercolor") ?? "000000";
-                                    string hbordersize = query.Get("bordersize") ?? "0";
+                                    int hbordersize = int.TryParse(query.Get("bordersize"), out float bresult) ? bresult : 0;
                                     string hanimation = query.Get("animation") ?? "ScrollUp";
                                     float hduration = float.TryParse(query.Get("duration"), out float hresult) ? hresult : 15.0f;
                                     LogIt($"Highscore is now set to game {hgame} with size {hsize}, color {hcolor}, font {hfont}, border color {hbordercolor}, border size {hbordersize}, animation {hanimation} with a duration of {hduration} seconds");
