@@ -741,7 +741,7 @@ namespace DOF2DMD
                     // Reemplazar '|' por ' - ' en toda la salida antes de unir las líneas
                     string formattedOutput = string.Join("|", output.Replace("|", " - ").Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)) + "|";
                     
-                    DisplayText(formattedOutput, size, color, font, bordercolor, bordersize, cleanbg, animation, duration,loop);
+                    DisplayText(formattedOutput, size, color, font, bordercolor, bordersize, cleanbg, animation, duration,loop, false);
                     
                 }
     
@@ -1269,7 +1269,7 @@ namespace DOF2DMD
                                         loop = false; // default value if the conversion fails
                                     }
 
-                                    if (!DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop, queue))
+                                    if (!DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop, tqueue))
                                     {
                                         sReturn = "Error when displaying text";
                                     }
