@@ -87,6 +87,7 @@ namespace DOF2DMD
         private static Timer _loopTimer;
         private static readonly object _scoreQueueLock = new object();
         private static readonly object _animationQueueLock = new object();
+        private static readonly object _textQueueLock = new object();
         private static readonly object sceneLock = new object();
         private static Sequence _queue;
 
@@ -98,10 +99,34 @@ namespace DOF2DMD
             public string Path { get; set; }
             public float Duration { get; set; } 
             public string Animation { get; set; }
-
+            public string Text { get; set; }
+            public string Size  { get; set; }
+            public string Color  { get; set; }
+            public string Font  { get; set; }
+            public string Bordercolor  { get; set; }
+            public int Bordersize  { get; set; }
+                
             public QueueItem(string path, float duration, string animation)
             {
                 Path = path;
+                Duration = duration;
+                Animation = animation;
+                Text = string.Empty;
+                Size = string.Empty;
+                Color = string.Empty;
+                Font = string.Empty;
+                Bordercolor = string.Empty;
+                Bordersize = 0;
+            }
+            public QueueItem(string text, string size, string color, string font, string bordercolor, int bordersize, float duration, string animation)
+            {
+                Path = string.Empty;
+                Text = text;
+                Size = size;
+                Color = color;
+                Font = font;
+                Bordercolor = bordercolor;
+                Bordersize = bordersize;
                 Duration = duration;
                 Animation = animation;
             }
@@ -233,17 +258,35 @@ namespace DOF2DMD
                 lock (_animationQueueLock)
                 {
                     var item = _animationQueue.Dequeue();
-                    LogIt($"⏱️ ⏳AnimationTimer: animation done, I will play {item.Path} next");
-                    if (_animationQueue.Count > 0)
+                    if(!string.IsNullOrEmpty(item.Path))
+                       {
+                            LogIt($"⏱️ ⏳AnimationTimer: animation done, I will play {item.Path} next");
+                       }
+                    else if(!string.IsNullOrEmpty(item.Text))
+                       {
+                            LogIt($"⏱️ ⏳AnimationTimer: animation done, I will show {item.Text} next");
+                       }
+                    if (_animationQueue.Count > 0 && !string.IsNullOrEmpty(item.Path))
                     {
                         LogIt($"⏱️ ⏳Animation queue has now {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => i.Path))}");
+                    }
+                    else if (_animationQueue.Count > 0 && !string.IsNullOrEmpty(item.Text))
+                    {
+                        LogIt($"⏱️ ⏳Animation queue has now {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => i.Text))}");
                     }
                     else
                     {
                         LogIt($"⏱️ ⏳Animation queue is now empty");
                     }
-
-                    DisplayPicture(item.Path, item.Duration, item.Animation, false);
+                    
+                    if(!string.IsNullOrEmpty(item.Path))
+                    {
+                        DisplayPicture(item.Path, item.Duration, item.Animation, false);
+                    }
+                    if(!string.IsNullOrEmpty(item.Text))
+                    {
+                        DisplayText(item.Text, item.Size, item.Color, item.Font, item.Bordercolor, item.Bordersize, false, item.Animation, item.Duration, false, false);
+                    }
                 }
             }
             else if (AppSettings.ScoreDmd != 0)
@@ -714,7 +757,7 @@ namespace DOF2DMD
         /// Displays text on the DMD device.
         /// %0A or | for line break
         /// </summary>
-        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animation, float duration, bool loop)
+        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, int bordersize, bool cleanbg, string animation, float duration, bool loop, bool queue)
         {
             try
             {
@@ -736,7 +779,7 @@ namespace DOF2DMD
                 }
 
                 // Determine if border is needed
-                int border = bordersize != "0" ? 1 : 0;
+                int border = bordersize != 0 ? 1 : 0;
 
                 System.Action displayAction = () =>
                 {
@@ -1207,22 +1250,26 @@ namespace DOF2DMD
                                     string color = query.Get("color") ?? "FFFFFF";
                                     string font = query.Get("font") ?? "Consolas";
                                     string bordercolor = query.Get("bordercolor") ?? "000000";
-                                    string bordersize = query.Get("bordersize") ?? "0";
+                                    int bordersize = int.TryParse(query.Get("bordersize"), out int bresult) ? bresult : 0;
                                     string animation = query.Get("animation") ?? "none";
                                     float textduration = float.TryParse(query.Get("duration"), out float tresult) ? tresult : 5.0f;
                                     LogIt($"Text is now set to: {text} with size {size}, color {color}, font {font}, border color {bordercolor}, border size {bordersize}, animation {animation} with a duration of {textduration} seconds");
+                                    bool tqueue;
+                                    // Check if 'queue' exists in the query parameters
+                                    tqueue = dof2dmdUrl.Contains("&queue") || dof2dmdUrl.EndsWith("?queue");
+                                    
                                     bool cleanbg;
                                     if (!bool.TryParse(query.Get("cleanbg"), out cleanbg))
                                     {
-                                        cleanbg = true; // valor predeterminado si la conversión falla
+                                        cleanbg = true; // default value if the conversion fails
                                     }
                                     bool loop;
                                     if (!bool.TryParse(query.Get("loop"), out loop))
                                     {
-                                        loop = false; // valor predeterminado si la conversión falla
+                                        loop = false; // default value if the conversion fails
                                     }
 
-                                    if (!DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop))
+                                    if (!DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop, queue))
                                     {
                                         sReturn = "Error when displaying text";
                                     }
