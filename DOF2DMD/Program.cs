@@ -205,7 +205,7 @@ namespace DOF2DMD
 
             // Set and display game marquee
             SetGameMarquee(AppSettings.StartPicture);
-            DisplayPicture(GetGameMarquee(), -1, "none", false);
+            DisplayPicture(GetGameMarquee(), -1, "none", false, true);
         }
 
         private static (FlexDMD.Font TextFont, FlexDMD.Font NormalFont, FlexDMD.Font HighlightFont) InitializeFonts(
@@ -277,7 +277,7 @@ namespace DOF2DMD
                     
                     if(!string.IsNullOrEmpty(item.Path))
                     {
-                        DisplayPicture(item.Path, item.Duration, item.Animation, false);
+                        DisplayPicture(item.Path, item.Duration, item.Animation, false, true);
                     }
                     else if(!string.IsNullOrEmpty(item.Text))
                     {
@@ -323,7 +323,7 @@ namespace DOF2DMD
             {
                 try
                 {
-                    DisplayPicture(GetGameMarquee(), -1, "none", false);
+                    DisplayPicture(GetGameMarquee(), -1, "none", false, true);
                 }
                 finally
                 {
@@ -483,7 +483,7 @@ namespace DOF2DMD
         /// <summary>
         /// Displays an image or video file on the DMD device using native FlexDMD capabilities.
         /// </summary>
-        public static bool DisplayPicture(string path, float duration, string animation, bool toQueue, bool sCleanbg)
+        public static bool DisplayPicture(string path, float duration, string animation, bool toQueue, bool cleanbg)
         {
             try
             {
