@@ -483,7 +483,7 @@ namespace DOF2DMD
         /// <summary>
         /// Displays an image or video file on the DMD device using native FlexDMD capabilities.
         /// </summary>
-        public static bool DisplayPicture(string path, float duration, string animation, bool toQueue)
+        public static bool DisplayPicture(string path, float duration, string animation, bool toQueue, bool sCleanbg)
         {
             try
             {
@@ -583,8 +583,13 @@ namespace DOF2DMD
                         try
                         {
                             // Clear existing resources
-                            _queue.RemoveAllScenes();
-                            gDmdDevice.Graphics.Clear(Color.Black);
+                            if (cleanbg)
+                            {
+                                _queue.RemoveAllScenes();
+                                gDmdDevice.Graphics.Clear(Color.Black);
+                                _loopTimer?.Dispose();
+                            }
+                            
                             _scoreDelayTimer?.Dispose();
                             _scoreDelayTimer = null;
                             _scoreBoard.Visible = false;
@@ -1207,7 +1212,7 @@ namespace DOF2DMD
                             switch (urlParts[3])
                             {
                                 case "picture":
-                                    //[url_prefix]/v1/display/picture?path=<image or video path>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&fixed=<true|false>
+                                    //[url_prefix]/v1/display/picture?path=<image or video path>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&queue&cleanbg=<true|false>&fixed=<true|false>
                                     string picturepath = query.Get("path");
                                     string pFixed = query.Get("fixed") ?? "false";
                                     float pictureduration = float.TryParse(query.Get("duration"), out float result) ? result : 0.0f;
@@ -1234,7 +1239,12 @@ namespace DOF2DMD
                                         for (int i = 1; i <= 4; i++)
                                             gScore[i] = 0;
                                     }
-                                    bool success = DisplayPicture(picturepath, pictureduration, pictureanimation, queue);
+                                    bool pcleanbg;
+                                    if (!bool.TryParse(query.Get("cleanbg"), out pcleanbg))
+                                    {
+                                        pcleanbg = true; // default value if the conversion fails
+                                    }
+                                    bool success = DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg);
                                     if (!success)
                                     {
                                         sReturn = $"Picture or video not found: {picturepath}";
