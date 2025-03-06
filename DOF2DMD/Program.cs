@@ -266,13 +266,9 @@ namespace DOF2DMD
                        {
                             LogIt($"⏱️ ⏳AnimationTimer: animation done, I will show {item.Text} next");
                        }
-                    if (_animationQueue.Count > 0 && !string.IsNullOrEmpty(item.Path))
+                    if (_animationQueue.Count > 0 )
                     {
-                        LogIt($"⏱️ ⏳Animation queue has now {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => i.Path))}");
-                    }
-                    else if (_animationQueue.Count > 0 && !string.IsNullOrEmpty(item.Text))
-                    {
-                        LogIt($"⏱️ ⏳Animation queue has now {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => i.Text))}");
+                        LogIt($"⏱️ ⏳Animation queue has now {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => !string.IsNullOrEmpty(i.Text) ? i.Text : i.Path).Where(text => !string.IsNullOrEmpty(text)))}");
                     }
                     else
                     {
@@ -283,7 +279,7 @@ namespace DOF2DMD
                     {
                         DisplayPicture(item.Path, item.Duration, item.Animation, false);
                     }
-                    if(!string.IsNullOrEmpty(item.Text))
+                    else if(!string.IsNullOrEmpty(item.Text))
                     {
                         DisplayText(item.Text, item.Size, item.Color, item.Font, item.Bordercolor, item.Bordersize, false, item.Animation, item.Duration, false, false);
                     }
