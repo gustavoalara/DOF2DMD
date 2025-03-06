@@ -577,7 +577,7 @@ namespace DOF2DMD
                         }
                     }
 
-                    gDmdDevice.Post(() =>
+                    System.Action displayAction = () =>
                     {
                         gDmdDevice.Clear = true;
                         try
@@ -668,7 +668,10 @@ namespace DOF2DMD
                         }
                         
                         LogIt($"📷Rendering {(isVideo ? $"video (duration: {duration * 1000}ms)" : "image")}: {fullPath}");
-                    });
+                    };
+                    
+                     // Execute initial action
+                    gDmdDevice.Post(displayAction);
         
                 });
         
