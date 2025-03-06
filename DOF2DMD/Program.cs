@@ -653,9 +653,20 @@ namespace DOF2DMD
                         duration = (videoLoop) ? -1 : duration;
 
                         BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration);
-                                                
+
                         _queue.Visible = true;
-                        _queue.Enqueue(bg);
+
+                        // Add scene to the queue or directly to the stage
+                        if (cleanbg)
+                        {
+                            _queue.Enqueue(bg);
+                            _loopTimer?.Dispose();
+                        }
+                        else
+                        {
+                            gDmdDevice.Stage.AddActor(bg);
+                        }
+                        
                         LogIt($"📷Rendering {(isVideo ? $"video (duration: {duration * 1000}ms)" : "image")}: {fullPath}");
                     });
         
