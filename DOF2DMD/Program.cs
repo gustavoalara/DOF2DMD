@@ -564,7 +564,7 @@ namespace DOF2DMD
                         return;
                     }
 
-                    // If this picture needs to be queued AND there is an animation running BUT current animation is not meant to be infinite, 
+                    // If this picture needs to be queued AND there is an animation/text running BUT current animation/text is not meant to be infinite, 
                     // then add this picture and its parameters to the animation queue. The animation timer will take care of it
                     if (toQueue && _animationTimer != null && _currentDuration > 0)
                     {
@@ -666,9 +666,10 @@ namespace DOF2DMD
                         {
                             gDmdDevice.Stage.AddActor(bg);
                         }
-                        
-                        LogIt($"📷Rendering {(isVideo ? $"video (duration: {duration * 1000}ms)" : "image")}: {fullPath}");
+
                     };
+                                            
+                    LogIt($"📷Rendering {(isVideo ? $"video (duration: {duration * 1000}ms)" : "image")}: {fullPath}");
                     
                      // Execute initial action
                     gDmdDevice.Post(displayAction);
@@ -795,61 +796,97 @@ namespace DOF2DMD
 
                 // Determine if border is needed
                 int border = bordersize != 0 ? 1 : 0;
-
-                System.Action displayAction = () =>
+                
+                // Now that we've validated everything, process the display asynchronously
+                _ = Task.Run(() =>
                 {
-                    // Create font and label actor
-                    FlexDMD.Font myFont = gDmdDevice.NewFont(localFontPath, HexToColor(color), HexToColor(bordercolor), border);
-                    var labelActor = (Actor)gDmdDevice.NewLabel("MyLabel", myFont, text);
-
-                    gDmdDevice.Graphics.Clear(Color.Black);
-                    _scoreDelayTimer?.Dispose();
-                    _scoreBoard.Visible = false;
-
-                    var currentActor = new Actor();
-                    if (cleanbg)
+                    // Check if gDmdDevice is initialized
+                    int retries = 10;
+                    while (gDmdDevice == null && retries > 0)
                     {
-                        _queue.RemoveAllScenes();
-                        _loopTimer?.Dispose();
+                        Thread.Sleep(1000);
+                        LogIt($"Retrying DMD device initialization {retries} retries left");
+                        retries--;
                     }
 
-                    if (duration > 0)
+                    if (gDmdDevice == null)
                     {
-                        _animationTimer?.Dispose();
-                        _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                        LogIt("DMD device initialization failed 10 retries");
+                        return;
                     }
-                    _currentDuration = duration;
-                    // Create background scene based on animation type
-                    BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), currentActor, text, myFont, duration);
 
-                    _queue.Visible = true;
-
-                    // Add scene to the queue or directly to the stage
-                    if (cleanbg)
+                    // If this text needs to be queued AND there is an animation/text running BUT current animation/text is not meant to be infinite, 
+                    // then add this text and its parameters to the animation queue. The animation timer will take care of it
+                    if (toQueue && _animationTimer != null && _currentDuration > 0)
                     {
-                        _queue.Enqueue(bg);
-                        _loopTimer?.Dispose();
+                        lock (_animationQueueLock)
+                        {
+                            LogIt($"⏳Queuing {text} for display after current animation");
+                            _animationQueue.Enqueue(new QueueItem(text, size, color, font, bordercolor, bordersize, duration, animation));
+                            LogIt($"⏳Queue has {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => i.Text))}");
+                            return;
+                        }
                     }
-                    else
+                    System.Action displayAction = () =>
                     {
-                        gDmdDevice.Stage.AddActor(bg);
+                        // Create font and label actor
+                        FlexDMD.Font myFont = gDmdDevice.NewFont(localFontPath, HexToColor(color), HexToColor(bordercolor), border);
+                        var labelActor = (Actor)gDmdDevice.NewLabel("MyLabel", myFont, text);
+    
+                        gDmdDevice.Graphics.Clear(Color.Black);
+                        _scoreDelayTimer?.Dispose();
+                        _scoreBoard.Visible = false;
+    
+                        var currentActor = new Actor();
+                        if (cleanbg)
+                        {
+                            _queue.RemoveAllScenes();
+                            _loopTimer?.Dispose();
+                        }
+    
+                        if (duration > 0)
+                        {
+                            _animationTimer?.Dispose();
+                            _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                        }
+                        _currentDuration = duration;
+                        // Create background scene based on animation type
+                        BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), currentActor, text, myFont, duration);
+    
+                        _queue.Visible = true;
+    
+                        // Add scene to the queue or directly to the stage
+                        if (cleanbg)
+                        {
+                            _queue.Enqueue(bg);
+                            _loopTimer?.Dispose();
+                        }
+                        else
+                        {
+                            gDmdDevice.Stage.AddActor(bg);
+                        }
+
+                    };
+
+                     LogIt($"Rendering text: {text}");
+                    
+                    // Execute initial action
+                    gDmdDevice.Post(displayAction);
+    
+                    // If loop is true, configure the timer
+                    if (loop)
+                    {
+                        LogIt($"Rendering text: {text} in a loop");
+                        float waitDuration = duration * 0.85f; // 15% less than duration
+                        _loopTimer = new Timer(_ =>
+                        {
+                            gDmdDevice.Post(displayAction);
+                        }, null, (int)(waitDuration * 1000), (int)(waitDuration * 1000));
                     }
-                };
-
-                // Execute initial action
-                gDmdDevice.Post(displayAction);
-
-                // If loop is true, configure the timer
-                if (loop)
-                {
-                    float waitDuration = duration * 0.85f; // 15% less than duration
-                    _loopTimer = new Timer(_ =>
-                    {
-                        gDmdDevice.Post(displayAction);
-                    }, null, (int)(waitDuration * 1000), (int)(waitDuration * 1000));
-                }
-
-                LogIt($"Rendering text: {text}");
+               
+                });
+                
+                // Return true immediately after validation, while display processing continues in background
                 return true;
             }
             catch (Exception ex)
