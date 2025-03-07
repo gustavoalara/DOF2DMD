@@ -1774,29 +1774,29 @@ namespace DOF2DMD
 
         public ScrollingRightPictureScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
-            _container = background;
-            if (_container != null) AddActor(_container);
+            _background = background;
+            if (_background != null) AddActor(_background);
             
-            AddActor(_container);
+            AddActor(_background);
             var y = 0f;
             _length = pauseS;
-            _container.Height = y;
+            _background.Height = y;
         }
 
         protected override void Begin()
         {
             base.Begin();
-            _container.Y = (Height - _container.Height) / 2;
-            _container.X = -Width;
-            _tweener.Tween(_container, new { X = Width + Width * .1 }, _length, 0f);
+            _background.Y = (Height - _background.Height) / 2;
+            _background.X = -Width;
+            _tweener.Tween(_background, new { X = Width + Width * .1 }, _length, 0f);
         }
 
         public override void Update(float delta)
         {
             base.Update(delta);
-            if (_container.Width != Width)
+            if (_background.Width != Width)
             {
-                _container.Width = Width;
+                _background.Width = Width;
             }
         }
     }
