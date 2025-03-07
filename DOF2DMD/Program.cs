@@ -1811,14 +1811,13 @@ namespace DOF2DMD
             
             AddActor(_background);
             _length = pauseS;
-            Console.WriteLine(-Height);
-            _background.Height = -Height;
         }
 
         protected override void Begin()
         {
             base.Begin();
-            _background.Y = _background.Height;
+            _background.Y = -Height;
+            Console.WriteLine(-Height);
             _tweener.Tween(_background, new { Y = Height }, _length, 0f);
         }
 
