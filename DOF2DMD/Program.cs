@@ -1786,7 +1786,7 @@ namespace DOF2DMD
         protected override void Begin()
         {
             base.Begin();
-            _background.Y = (Height - _background.Height) / 2;
+            _background.Y = _background.Height;
             _background.X = -Width;
             _tweener.Tween(_background, new { X = Width + Width * .1 }, _length, 0f);
         }
