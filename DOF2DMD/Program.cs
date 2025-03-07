@@ -1769,8 +1769,8 @@ namespace DOF2DMD
     
     class ScrollingRightPictureScene : BackgroundScene
     {
-        private readonly Group _container;
         private readonly float _length;
+        private Actor _background = null;
 
         public ScrollingRightPictureScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
