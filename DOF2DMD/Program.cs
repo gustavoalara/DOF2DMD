@@ -695,7 +695,7 @@ namespace DOF2DMD
                 "none" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, ""),
                 "fade" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.FadeIn, duration, AnimationType.FadeOut, ""),
                 "scrollright" => new BackgroundScene(gDmdDevice,mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffRight, ""),
-                "scrollrightfull" => new   ScrollingRightPictureScene(gDmdDevice,mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffRight, ""),
+                "scrollrightfull" => new ScrollingRightPictureScene(gDmdDevice,mediaActor, AnimationType.None, duration, AnimationType.None, ""),
                 "scrollrightleft" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffLeft, ""),
                 "scrollleft" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, ""),
                 "scrollleftright" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffRight, ""),
@@ -1772,7 +1772,7 @@ namespace DOF2DMD
         private readonly Group _container;
         private readonly float _length;
 
-        public ScrollingRightScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        public ScrollingRightPictureScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _container = background;
             if (_container != null) AddActor(_container);
