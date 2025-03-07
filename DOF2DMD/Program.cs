@@ -1780,13 +1780,12 @@ namespace DOF2DMD
             AddActor(_background);
             var y = 0f;
             _length = pauseS;
-            _background.Height = y;
         }
 
         protected override void Begin()
         {
-            base.Begin();
-            _background.Y = _background.Height;
+            base.Begin();  
+            _background.Y = Height;
             _tweener.Tween(_background, new { Y = -Height }, _length, 0f);
         }
 
@@ -1817,7 +1816,6 @@ namespace DOF2DMD
         {
             base.Begin();
             _background.Y = -Height;
-            Console.WriteLine(-Height);
             _tweener.Tween(_background, new { Y = Height }, _length, 0f);
         }
 
