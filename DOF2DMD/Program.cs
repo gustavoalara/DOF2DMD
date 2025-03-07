@@ -695,6 +695,7 @@ namespace DOF2DMD
                 "none" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, ""),
                 "fade" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.FadeIn, duration, AnimationType.FadeOut, ""),
                 "scrollright" => new BackgroundScene(gDmdDevice,mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffRight, ""),
+                "scrollrightfull" => new   ScrollingRightPictureScene(gDmdDevice,mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffRight, ""),
                 "scrollrightleft" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffLeft, ""),
                 "scrollleft" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, ""),
                 "scrollleftright" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffRight, ""),
@@ -1765,7 +1766,40 @@ namespace DOF2DMD
             }
         }
     }
+    
+    class ScrollingRightPictureScene : BackgroundScene
+    {
+        private readonly Group _container;
+        private readonly float _length;
 
+        public ScrollingRightScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        {
+            _container = background;
+            if (_container != null) AddActor(_container);
+            
+            AddActor(_container);
+            var y = 0f;
+            _length = pauseS;
+            _container.Height = y;
+        }
+
+        protected override void Begin()
+        {
+            base.Begin();
+            _container.Y = (Height - _container.Height) / 2;
+            _container.X = -Width;
+            _tweener.Tween(_container, new { X = Width + Width * .1 }, _length, 0f);
+        }
+
+        public override void Update(float delta)
+        {
+            base.Update(delta);
+            if (_container.Width != Width)
+            {
+                _container.Width = Width;
+            }
+        }
+    }
     class ScoreBoard : Group
     {
         private readonly FlexDMD.Label[] _scores = new FlexDMD.Label[4];
