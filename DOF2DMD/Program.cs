@@ -1811,7 +1811,7 @@ namespace DOF2DMD
             
             AddActor(_background);
             _length = pauseS;
-            _background.Height = -Height;
+            _background.Height = -64f;
         }
 
         protected override void Begin()
