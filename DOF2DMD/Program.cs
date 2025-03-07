@@ -1810,9 +1810,8 @@ namespace DOF2DMD
             if (_background != null) AddActor(_background);
             
             AddActor(_background);
-            var y = -64f;
             _length = pauseS;
-            _background.Height = y;
+            _background.Height = -Height;
         }
 
         protected override void Begin()
