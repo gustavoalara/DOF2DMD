@@ -1810,7 +1810,7 @@ namespace DOF2DMD
             if (_background != null) AddActor(_background);
             
             AddActor(_background);
-            var y = Height;
+            var y = -64f;
             _length = pauseS;
             _background.Height = y;
         }
@@ -1818,7 +1818,7 @@ namespace DOF2DMD
         protected override void Begin()
         {
             base.Begin();
-            _background.Y = -(_background.Height*2);
+            _background.Y = _background.Height;
             _tweener.Tween(_background, new { Y = Height }, _length, 0f);
         }
 
