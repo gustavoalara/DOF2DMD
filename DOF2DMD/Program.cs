@@ -1818,8 +1818,8 @@ namespace DOF2DMD
         protected override void Begin()
         {
             base.Begin();
-            _background.Y = -_background.Height;
-            _tweener.Tween(_background, new { Y = _background.Height + _background.Height * .1 }, _length, 0f);
+            _background.Y = -(_background.Height*2);
+            _tweener.Tween(_background, new { Y = Height }, _length, 0f);
         }
 
         public override void Update(float delta)
