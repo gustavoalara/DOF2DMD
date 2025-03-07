@@ -1787,7 +1787,7 @@ namespace DOF2DMD
         {
             base.Begin();
             _background.Y = _background.Height;
-            _tweener.Tween(_background, new { Y = -Height + 1.02f }, _length, 0f);
+            _tweener.Tween(_background, new { Y = -Height }, _length, 0f);
         }
 
         public override void Update(float delta)
@@ -1819,7 +1819,7 @@ namespace DOF2DMD
         {
             base.Begin();
             _background.Y = -_background.Height;
-            _tweener.Tween(_background, new { Y = Height + 1.02f }, _length, 0f);
+            _tweener.Tween(_background, new { Y = Height + Height * .1 }, _length, 0f);
         }
 
         public override void Update(float delta)
