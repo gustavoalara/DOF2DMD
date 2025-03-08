@@ -717,7 +717,7 @@ namespace DOF2DMD
         /// Displays Highscores on the DMD device.
         /// %0A or | for line break
         /// </summary>
-        public static bool DisplayHighscores(string game, string size, string color, string font, string bordercolor, int bordersize, bool cleanbg, string animation, float duration, bool loop)
+        public static bool DisplayHighscores(string game, string size, string color, string font, string bordercolor, int bordersize, bool cleanbg, string animation, float duration, bool loop, bool toQueue)
         {
             // Construir la ruta completa del ejecutable y el archivo de highscore
             string hi2txtExe = System.IO.Path.Combine(AppSettings.hi2txt_path, "Hi2Txt.exe");
@@ -764,7 +764,7 @@ namespace DOF2DMD
                     // Reemplazar '|' por ' - ' en toda la salida antes de unir las líneas
                     string formattedOutput = string.Join("|", output.Replace("|", " - ").Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)) + "|";
                     
-                    DisplayText(formattedOutput, size, color, font, bordercolor, bordersize, cleanbg, animation, duration,loop, false);
+                    DisplayText(formattedOutput, size, color, font, bordercolor, bordersize, cleanbg, animation, duration,loop, toQueue);
                     
                 }
     
@@ -1400,8 +1400,12 @@ namespace DOF2DMD
                                     string hbordercolor = query.Get("bordercolor") ?? "000000";
                                     int hbordersize = int.TryParse(query.Get("bordersize"), out int hbresult) ? hbresult : 0;
                                     string hanimation = query.Get("animation") ?? "ScrollUp";
+                                    hanimation = (hanimation == "ScrollDown" || hanimation == "ScrollUp") ? hanimation : "ScrollUp";
                                     float hduration = float.TryParse(query.Get("duration"), out float hresult) ? hresult : 15.0f;
                                     LogIt($"Highscore is now set to game {hgame} with size {hsize}, color {hcolor}, font {hfont}, border color {hbordercolor}, border size {hbordersize}, animation {hanimation} with a duration of {hduration} seconds");
+                                    bool hiqueue;
+                                    // Check if 'queue' exists in the query parameters
+                                    hiqueue = dof2dmdUrl.Contains("&queue") || dof2dmdUrl.EndsWith("?queue");
                                     bool hcleanbg;
                                     if (!bool.TryParse(query.Get("cleanbg"), out hcleanbg))
                                     {
@@ -1413,7 +1417,7 @@ namespace DOF2DMD
                                         hloop = false; // valor predeterminado si la conversión falla
                                     }
 
-                                    if (!DisplayHighscores(hgame, hsize, hcolor, hfont, hbordercolor, hbordersize, hcleanbg, hanimation, hduration, hloop))
+                                    if (!DisplayHighscores(hgame, hsize, hcolor, hfont, hbordercolor, hbordersize, hcleanbg, hanimation, hduration, hloop, hiqueue))
                                     {
                                         sReturn = "Error when displaying highscores";
                                     }
