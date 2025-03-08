@@ -482,57 +482,7 @@ namespace DOF2DMD
                 return null;
             }
         }
-        /// <summary>
-        /// Function to retain gif transparency.
-        /// </summary>
-        public class TransparentGIFImageWrapper
-        {
-            private readonly object _gifActor; // Mantener una referencia al actor GIFImage
         
-            public TransparentGIFImageWrapper(object gifActor)
-            {
-                _gifActor = gifActor;
-            }
-        
-            // Accede a las propiedades de la clase GIFImage utilizando reflexión
-            private Bitmap GetBitmap()
-            {
-                var bitmapProperty = _gifActor.GetType().GetProperty("Bitmap", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (bitmapProperty != null)
-                {
-                    return (Bitmap)bitmapProperty.GetValue(_gifActor);
-                }
-                return null;
-            }
-        
-            private void SetBitmap(Bitmap bitmap)
-            {
-                var bitmapProperty = _gifActor.GetType().GetProperty("Bitmap", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (bitmapProperty != null)
-                {
-                    bitmapProperty.SetValue(_gifActor, bitmap);
-                }
-            }
-        
-            // Función para corregir la transparencia del gif
-            public void FixTransparency()
-            {
-                var bitmap = GetBitmap();
-                if (bitmap != null)
-                {
-                    Bitmap newBitmap = new Bitmap(bitmap.Width, bitmap.Height, PixelFormat.Format32bppArgb);
-                    using (Graphics g = Graphics.FromImage(newBitmap))
-                    {
-                        g.Clear(Color.Transparent); // Fondo transparente
-                        g.DrawImage(bitmap, 0, 0);
-                    }
-        
-                    // Aplicar transparencia al nuevo bitmap
-                    newBitmap.MakeTransparent();
-                    SetBitmap(newBitmap); // Establecer el nuevo bitmap corregido
-                }
-            }
-        }
         /// <summary>
         /// Displays an image or video file on the DMD device using native FlexDMD capabilities.
         /// </summary>
@@ -658,18 +608,6 @@ namespace DOF2DMD
                             mediaActor = isVideo ?
                                 (Actor)gDmdDevice.NewVideo("MyVideo", fullPath) :
                                 (Actor)gDmdDevice.NewImage("MyImage", fullPath);
-                                // Verificar si el actor es un GIFImage
-                                if (mediaActor.GetType().Name == "GIFImage")
-                                {
-                                    // Usar reflexión para envolver el GIFImage en el decorador
-                                    var gifWrapper = new TransparentGIFImageWrapper(mediaActor);
-                            
-                                    // Corregir la transparencia en el GIF
-                                    gifWrapper.FixTransparency();
-                            
-                                    // Reemplazar el actor con el decorador (si es necesario)
-                                    // Si es necesario, actualiza el actor en el dispositivo con el nuevo objeto
-                                }
 
                             mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
                         }
