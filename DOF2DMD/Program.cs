@@ -280,11 +280,11 @@ namespace DOF2DMD
                     
                     if(!string.IsNullOrEmpty(item.Path))
                     {
-                        DisplayPicture(item.Path, item.Duration, item.Animation, false, true);
+                        DisplayPicture(item.Path, item.Duration, item.Animation, false, item.Cleanbg);
                     }
                     else if(!string.IsNullOrEmpty(item.Text))
                     {
-                        DisplayText(item.Text, item.Size, item.Color, item.Font, item.Bordercolor, item.Bordersize, false, item.Animation, item.Duration, false, false);
+                        DisplayText(item.Text, item.Size, item.Color, item.Font, item.Bordercolor, item.Bordersize, false, item.Animation, item.Duration, false, item.Cleanbg);
                     }
                 }
             }
@@ -1781,7 +1781,6 @@ namespace DOF2DMD
             if (_background != null) AddActor(_background);
             
             AddActor(_background);
-            var y = 0f;
             _length = pauseS;
         }
 
