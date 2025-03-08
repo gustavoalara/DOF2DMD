@@ -645,10 +645,17 @@ namespace DOF2DMD
                             mediaActor = isVideo ?
                                 (Actor)gDmdDevice.NewVideo("MyVideo", fullPath) :
                                 (Actor)gDmdDevice.NewImage("MyImage", fullPath);
-                                if (actor is GIFImage gifActor)
+                                if (actor.GetType().Name == "GIFImage")
                                 {
-                                    // Envolver el GIFImage en el decorador que maneja la transparencia
-                                    mediaActor = new TransparentGIFImageWrapper(gifActor);
+                                    // Usar reflexión para acceder al constructor privado de GIFImage (si es necesario)
+                                    var gifActorField = actor.GetType().GetField("_bitmap", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                                    if (gifActorField != null)
+                                    {
+                                        var gifActor = (GIFImage)actor;
+                            
+                                        // Envolver el GIFImage en el decorador que maneja la transparencia
+                                        actor = new TransparentGIFImageWrapper(gifActor);
+                                    }
                                 }
 
                             mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
