@@ -482,7 +482,44 @@ namespace DOF2DMD
                 return null;
             }
         }
-
+        /// <summary>
+        /// Function to retain gif transparency.
+        /// </summary>
+        public class TransparentGIFImageWrapper : GIFImage
+        {
+            private GIFImage _originalGifImage;
+        
+            public TransparentGIFImageWrapper(GIFImage originalGifImage)
+                : base(originalGifImage)
+            {
+                _originalGifImage = originalGifImage;
+            }
+        
+            // Método que corrige la transparencia después de que el frame ha sido actualizado
+            private void FixTransparency()
+            {
+                if (_originalGifImage != null && _originalGifImage.Bitmap != null)
+                {
+                    Bitmap newBitmap = new Bitmap(_originalGifImage.Bitmap.Width, _originalGifImage.Bitmap.Height, PixelFormat.Format32bppArgb);
+                    using (Graphics g = Graphics.FromImage(newBitmap))
+                    {
+                        g.Clear(Color.Transparent); // Fondo transparente
+                        g.DrawImage(_originalGifImage.Bitmap, 0, 0);
+                    }
+        
+                    // Aplicar transparencia basada en el color de fondo del GIF
+                    newBitmap.MakeTransparent();
+                    _originalGifImage.Bitmap = newBitmap; // Actualizar el bitmap original
+                }
+            }
+        
+            // Sobrescribir UpdateFrame para incluir corrección de transparencia
+            public override void UpdateFrame()
+            {
+                base.UpdateFrame();
+                FixTransparency();  // Aplicar la corrección de transparencia después de actualizar el frame
+            }
+        }
         /// <summary>
         /// Displays an image or video file on the DMD device using native FlexDMD capabilities.
         /// </summary>
@@ -513,7 +550,7 @@ namespace DOF2DMD
                 else
                 {
                     // List of possible extensions for other
-                    extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp", ".apng" };
+                    extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
                 }
 
                 // Find the file to display
@@ -542,7 +579,7 @@ namespace DOF2DMD
                     LogIt($"❗ Can't display picture with '&' in the name {fullPath}.\nSolution is rename the file and replace '&' by '-' in file name - see https://github.com/DMDTools/DOF2DMD/issues/27");
                     return false;
                 }
-                bool isVideo = new List<string> { ".gif", ".avi", ".mp4", ".apng" }.Contains(foundExtension.ToLower());
+                bool isVideo = new List<string> { ".gif", ".avi", ".mp4" }.Contains(foundExtension.ToLower());
                 bool isImage = new List<string> { ".png", ".jpg", ".bmp" }.Contains(foundExtension.ToLower());
                 if (!isVideo && !isImage)
                 {
@@ -608,6 +645,11 @@ namespace DOF2DMD
                             mediaActor = isVideo ?
                                 (Actor)gDmdDevice.NewVideo("MyVideo", fullPath) :
                                 (Actor)gDmdDevice.NewImage("MyImage", fullPath);
+                                if (actor is GIFImage gifActor)
+                                {
+                                    // Envolver el GIFImage en el decorador que maneja la transparencia
+                                    mediaActor = new TransparentGIFImageWrapper(gifActor);
+                                }
 
                             mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
                         }
