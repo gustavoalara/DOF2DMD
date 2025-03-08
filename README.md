@@ -149,7 +149,19 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
   - **animationin**: Display animation: `FadeIn|FadeOut|ScrollOffRight|ScrollOffLeft|ScrollOnLeft|ScrollOnRight|ScrollOffUp|ScrollOffDown|ScrollOnUp|ScrollOnDown|FillFadeIn|FillFadeOut|None`
   - **animationout**: Display animation: `FadeIn|FadeOut|ScrollOffRight|ScrollOffLeft|ScrollOnLeft|ScrollOnRight|ScrollOffUp|ScrollOffDown|ScrollOnUp|ScrollOnDown|FillFadeIn|FillFadeOut|None`
   - **duration**: time to present the scene in the DMD (If an animation is selected, the screen will remain black once the animation ends if the time is longer than the animation itself. If the time is -1, it will be permanent)
-
+- `[url_prefix]/v1/display/highscores?game=<gamename>?size=XS|S|M|L|XL&color=<hex color>&font=<font>&bordercolor=<hex color>&bordersize=<0|1>&cleanbg=<true|false>&animation=<ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&loop=<true|false>&queue`  
+  Display scrolling highscores using MAME Highscores plugin 
+  - **game**: The name of the MAME hiscore game without the .hi as appears in MAME\hiscore folder 
+  - **size**: The size of the text (Extra Small (XS), Small (S), Medium (M), Large (L) or Extra Large (XL)) (Default M)
+  - **color**: The color of the text in hexadecimal format (for example: color=FFFFFF) (Default white)
+  - **font**: The font family to be used for the text (Bitmap Font file, there are some samples on resources folder, only is needed to use the Font name before the _ symbol. For example: Matrix or BTTF) (Default Consolas)
+  - **bordercolor**: The color of the text border in hexadecimal format (for example: color=FFAAFF)
+  - **bordersize**: The size of the text border (0 or 1) (Default 0)
+  - **cleanbg**: Clean the active screen (when not cleaned the text will showed over the current image/animation) (Default: true)
+  - **animation**: Highscore animation. ScrollUp|ScrollDown
+  - **duration**: time to present the highscore list in the DMD 
+  - **loop**: enable highscore scroll infinite loop
+  - **queue**: If present, the highscore will be queued to be displayed after the current object on DMD is finished. If not present, the current object in the DMD will be replaced immediately by the highscore
 
 ## Using MAME highscores
 
@@ -157,7 +169,7 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
 
 
 DOF2DMD now has the ability to display the MAME high score list as well. To enable this, MAME must have the Highscores plugin activated, and Hi2txt (https://greatstoneex.github.io/hi2txt-doc/) must be installed.  
-If we want to use this feature, we need to enable it in *settings.ini*, specify the path to our MAME installation, and provide the path to the *hi2txt* executable, as shown below:
+If you want to use this feature, you need to enable it in *settings.ini*, specify the path to your MAME installation, and provide the path to the *hi2txt* executable, as shown below:
 
 ```ini
 hi2txt_enabled=true
