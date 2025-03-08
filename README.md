@@ -153,7 +153,7 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
 
 ## Using MAME highscores
 
-![hiscore](hiscore.gif)
+![hiscores](hiscores.gif)
 
 
 DOF2DMD now has the ability to display the MAME high score list as well. To enable this, MAME must have the Highscores plugin activated, and Hi2txt (https://greatstoneex.github.io/hi2txt-doc/) must be installed.  
