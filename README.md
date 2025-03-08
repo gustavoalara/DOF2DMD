@@ -56,7 +56,7 @@ uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
     ;score_dmd=1
     ;marquee_dmd=1
     ;Uses hi2txt to show game highscores, needs MAME path to read highscores (and MAME highscore plugin activated)
-    ;hi2txt_enabled=0
+    ;hi2txt_enabled=false
     ;hi2txt_path=c:\hi2txt
     ;mame_path=
     ; Not implemented ---
@@ -160,7 +160,7 @@ DOF2DMD now has the ability to display the MAME high score list as well. To enab
 If we want to use this feature, we need to enable it in *settings.ini*, specify the path to our MAME installation, and provide the path to the *hi2txt* executable, as shown below:
 
 ```ini
-hi2txt_enabled=1
+hi2txt_enabled=true
 hi2txt_path=c:\hi2txt
 mame_path=C:\MAME
 ```
