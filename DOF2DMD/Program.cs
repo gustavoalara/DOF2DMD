@@ -659,10 +659,10 @@ namespace DOF2DMD
                                 (Actor)gDmdDevice.NewVideo("MyVideo", fullPath) :
                                 (Actor)gDmdDevice.NewImage("MyImage", fullPath);
                                 // Verificar si el actor es un GIFImage
-                                if (actor.GetType().Name == "GIFImage")
+                                if (mediaActor.GetType().Name == "GIFImage")
                                 {
                                     // Usar reflexión para envolver el GIFImage en el decorador
-                                    var gifWrapper = new TransparentGIFImageWrapper(actor);
+                                    var gifWrapper = new TransparentGIFImageWrapper(mediaActor);
                             
                                     // Corregir la transparencia en el GIF
                                     gifWrapper.FixTransparency();
