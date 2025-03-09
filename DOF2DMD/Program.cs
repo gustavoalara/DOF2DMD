@@ -513,7 +513,7 @@ namespace DOF2DMD
                 else
                 {
                     // List of possible extensions for other
-                    extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
+                    extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp", ".apng" };
                 }
 
                 // Find the file to display
@@ -542,7 +542,7 @@ namespace DOF2DMD
                     LogIt($"❗ Can't display picture with '&' in the name {fullPath}.\nSolution is rename the file and replace '&' by '-' in file name - see https://github.com/DMDTools/DOF2DMD/issues/27");
                     return false;
                 }
-                bool isVideo = new List<string> { ".gif", ".avi", ".mp4" }.Contains(foundExtension.ToLower());
+                bool isVideo = new List<string> { ".gif", ".avi", ".mp4", ".apng" }.Contains(foundExtension.ToLower());
                 bool isImage = new List<string> { ".png", ".jpg", ".bmp" }.Contains(foundExtension.ToLower());
                 if (!isVideo && !isImage)
                 {
@@ -986,13 +986,13 @@ namespace DOF2DMD
                         path = AppSettings.artworkPath + "/" + path;
                     string localPath = HttpUtility.UrlDecode(path);
 
-                    List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
+                    List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp", ".apng" };
 
                     if (FileExistsWithExtensions(localPath, extensions, out string foundExtension))
                     {
                         string fullPath = localPath + foundExtension;
 
-                        List<string> videoExtensions = new List<string> { ".gif", ".avi", ".mp4" };
+                        List<string> videoExtensions = new List<string> { ".gif", ".avi", ".mp4", ".apng" };
                         List<string> imageExtensions = new List<string> { ".png", ".jpg", ".bmp" };
 
                         if (videoExtensions.Contains(foundExtension.ToLower()))
@@ -1068,13 +1068,13 @@ namespace DOF2DMD
                     path = AppSettings.artworkPath + "/" + path;
                     string localPath = HttpUtility.UrlDecode(path);
 
-                    List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
+                    List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp", ".apng" };
 
                     if (FileExistsWithExtensions(localPath, extensions, out string foundExtension))
                     {
                         string fullPath = localPath + foundExtension;
 
-                        List<string> videoExtensions = new List<string> { ".gif", ".avi", ".mp4" };
+                        List<string> videoExtensions = new List<string> { ".gif", ".avi", ".mp4", ".apng" };
                         List<string> imageExtensions = new List<string> { ".png", ".jpg", ".bmp" };
 
                         if (videoExtensions.Contains(foundExtension.ToLower()))
