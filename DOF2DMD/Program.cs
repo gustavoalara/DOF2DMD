@@ -65,6 +65,7 @@ namespace DOF2DMD
         public static int gCredits = 1;
         private static readonly object gGameMarqueeLock = new object();
         public static string gGameMarquee = "DOF2DMD";
+        private static Scene _currentScene = null;
         // Getter
         public static string GetGameMarquee()
         {
@@ -254,7 +255,13 @@ namespace DOF2DMD
         {
             _animationTimer.Dispose();
             _animationTimer = null;
-
+            // Verificar si la escena actual ha expirado
+            if (_currentScene != null && _currentScene.Time >= _currentScene.Pause)
+            {
+                gDmdDevice.Stage.RemoveActor(_currentScene); // Eliminar la escena del escenario
+                _currentScene = null; // Limpiar la referencia
+                LogIt("⏱️ AnimationTimer: Removing expired scene.");
+            }
             // Check if there are more animations in the queue
             if (_animationQueue.Count > 0)
             {
@@ -507,13 +514,13 @@ namespace DOF2DMD
                 if (path == GetGameMarquee())
                 {
                     // List of possible extensions for a static marquee
-                    extensions = new List<string> { ".png", ".jpg", ".bmp" };
+                    extensions = new List<string> { ".png", ".jpg", ".bmp", ".jpeg" };
                     LogIt($"Setting marquee to: {path}");
                 }
                 else
                 {
                     // List of possible extensions for other
-                    extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp", ".apng" };
+                    extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp", ".apng", ".jpeg" };
                 }
 
                 // Find the file to display
@@ -543,7 +550,7 @@ namespace DOF2DMD
                     return false;
                 }
                 bool isVideo = new List<string> { ".gif", ".avi", ".mp4", ".apng" }.Contains(foundExtension.ToLower());
-                bool isImage = new List<string> { ".png", ".jpg", ".bmp" }.Contains(foundExtension.ToLower());
+                bool isImage = new List<string> { ".png", ".jpg", ".jpeg", ".bmp" }.Contains(foundExtension.ToLower());
                 if (!isVideo && !isImage)
                 {
                     return false;
@@ -640,7 +647,7 @@ namespace DOF2DMD
                                 _animationQueue.Clear();
                                 LogIt($"⏳Animation queue cleared as duration was negative (immediate display, infinite duration)");
                             }
-                            duration = 0;
+                            //duration = -1;
                         }
 
                         // Adjust duration for videos and images if not explicitly set
@@ -650,13 +657,15 @@ namespace DOF2DMD
 
                         // Arm timer once animation is done playing
                         _animationTimer?.Dispose();
-                        _animationTimer = new Timer(AnimationTimer, null, (int)(duration * 1000), Timeout.Infinite);
-
+                        if (duration >= 0) // Verificar si la duración es no negativa
+                        {
+                            _animationTimer = new Timer(AnimationTimer, null, (int)(duration * 1000), Timeout.Infinite);
+                        }
                         //Check the video Loop
                         duration = (videoLoop) ? -1 : duration;
 
                         BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration);
-
+                        _currentScene = bg; // Almacenar la referencia a la escena actual
                         _queue.Visible = true;
 
                         // Add scene to the queue or directly to the stage
@@ -986,14 +995,14 @@ namespace DOF2DMD
                         path = AppSettings.artworkPath + "/" + path;
                     string localPath = HttpUtility.UrlDecode(path);
 
-                    List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp", ".apng" };
+                    List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp", ".apng", ".jpeg" };
 
                     if (FileExistsWithExtensions(localPath, extensions, out string foundExtension))
                     {
                         string fullPath = localPath + foundExtension;
 
                         List<string> videoExtensions = new List<string> { ".gif", ".avi", ".mp4", ".apng" };
-                        List<string> imageExtensions = new List<string> { ".png", ".jpg", ".bmp" };
+                        List<string> imageExtensions = new List<string> { ".png", ".jpg", ".bmp", ".jpeg" };
 
                         if (videoExtensions.Contains(foundExtension.ToLower()))
                         {
@@ -1068,14 +1077,14 @@ namespace DOF2DMD
                     path = AppSettings.artworkPath + "/" + path;
                     string localPath = HttpUtility.UrlDecode(path);
 
-                    List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp", ".apng" };
+                    List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp", ".apng", ".jpeg" };
 
                     if (FileExistsWithExtensions(localPath, extensions, out string foundExtension))
                     {
                         string fullPath = localPath + foundExtension;
 
                         List<string> videoExtensions = new List<string> { ".gif", ".avi", ".mp4", ".apng" };
-                        List<string> imageExtensions = new List<string> { ".png", ".jpg", ".bmp" };
+                        List<string> imageExtensions = new List<string> { ".png", ".jpg", ".bmp", ".jpeg" };
 
                         if (videoExtensions.Contains(foundExtension.ToLower()))
                         {
