@@ -24,7 +24,7 @@ Here is how it looks like with an emulated DMD (using Freezy DMD extensions):
 
 ![demo](demo.gif)
 
-DOF2DMD relies on [FlexDMD](https://github.com/vbousquet/flexdmd), which itself
+DOF2DMD relies on a modified version of [FlexDMD][(https://github.com/gustavoalara/flexdmd/)], which itself
 uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
 
 ![Architecture](architecture.drawio.png)
