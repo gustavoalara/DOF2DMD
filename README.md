@@ -80,6 +80,8 @@ uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
 The images and animations must be in the `artwork` folder (by default in the DOF2DMD path under the `artwork` folder).
 > [!NOTE]
 > The modified FlexDMD.dll version used in this release has animated PNG support with alpha channel (transparency) and add transparency on GIF animations too. So this enables the capability of showing multiples animated gifs/apngs at same time on the DMD with or without movement on the panel through the animation parameter like game sprites.
+
+
 > [!NOTE]
 > I provide a basic set of artwork, so that you can test and start editing DOFLINX's `.MAME` files.
 You probably need more artwork. I created a tool which may help - see [artwork4DMD](https://github.com/DMDTools/artwork4DMD).
