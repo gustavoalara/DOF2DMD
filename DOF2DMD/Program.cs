@@ -1202,7 +1202,10 @@ namespace DOF2DMD
                                             }
                                             if (queue)
                                             {
-                                                await Task.Delay(100); // Introduce el delay aquí
+                                                if(AppSettings.dmdWidth == "256")
+                                                    await Task.Delay(90); // Delay to avoid overlaping calls 
+                                                else
+                                                    await Task.Delay(180); // Delay to avoid overlaping calls 
                                             }
                                             bool success = DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg);
                                             if (!success)
@@ -1236,7 +1239,10 @@ namespace DOF2DMD
                                             }
                                             if (tqueue)
                                             {
-                                                await Task.Delay(90); // Introduce el delay aquí
+                                                if(AppSettings.dmdWidth == "256")
+                                                    await Task.Delay(90); // Delay to avoid overlaping calls 
+                                                else
+                                                    await Task.Delay(180); // Delay to avoid overlaping calls 
                                             }
                                             if (!DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop, tqueue))
                                             {
@@ -1258,7 +1264,7 @@ namespace DOF2DMD
                                             bool advcleanbg;
                                             if (!bool.TryParse(query.Get("cleanbg"), out advcleanbg))
                                             {
-                                                cleanbg = true; // valor predeterminado si la conversión falla
+                                                cleanbg = true; // default value if the conversion fails
                                             }
 
                                             if (!AdvancedDisplay(advtext, advpath, advsize, advcolor, advfont, advbordercolor, advbordersize, advcleanbg, animationIn, animationOut, advtextduration))
@@ -1275,7 +1281,7 @@ namespace DOF2DMD
                                             bool sCleanbg;
                                             if (!bool.TryParse(query.Get("cleanbg"), out sCleanbg))
                                             {
-                                                sCleanbg = true; // valor predeterminado si la conversión falla
+                                                sCleanbg = true; // default value if the conversion failsa
                                             }
 
                                             if (!DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], sCleanbg, gCredits))
@@ -1314,12 +1320,12 @@ namespace DOF2DMD
                                             bool hcleanbg;
                                             if (!bool.TryParse(query.Get("cleanbg"), out hcleanbg))
                                             {
-                                                hcleanbg = true; // valor predeterminado si la conversión falla
+                                                hcleanbg = true; // default value if the conversion fails
                                             }
                                             bool hloop;
                                             if (!bool.TryParse(query.Get("loop"), out hloop))
                                             {
-                                                hloop = false; // valor predeterminado si la conversión falla
+                                                hloop = false; // default value if the conversion fails
                                             }
 
                                             if (!DisplayHighscores(hgame, hsize, hcolor, hfont, hbordercolor, hbordersize, hcleanbg, hanimation, hduration, hloop, hiqueue))
