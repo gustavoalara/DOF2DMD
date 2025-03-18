@@ -79,7 +79,7 @@ uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
 
 The images and animations must be in the `artwork` folder (by default in the DOF2DMD path under the `artwork` folder).
 > [!NOTE]
-> The modified FlexDMD.dll version used in this release has animated PNG support with alpha channel (transparency) and add transparency on GIF animations too. So this enables the capability of showing multiples animated gifs/apngs at same time on the DMD with or without movement on the panel through the animation parameter like game sprites.
+> The modified FlexDMD.dll version used in this release has animated PNG support with alpha channel (transparency) and add transparency on GIF animations too. So this enables the capability of showing multiples animated gifs/apngs at same time on the DMD with or without movement on the panel through the animation parameter like game sprites. In the case of APNG files, the new FlexDMD.dll requires ffmpeg.exe installed on your system or in the same folder where flexdmd.dll is located.
 
 
 > [!NOTE]
