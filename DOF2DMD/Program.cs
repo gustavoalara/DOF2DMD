@@ -1202,7 +1202,7 @@ namespace DOF2DMD
                                             }
                                             if (queue)
                                             {
-                                                if(ushort.Parse(AppSettings.dmdWidth) == 256)
+                                                if(AppSettings.dmdWidth == 256)
                                                     await Task.Delay(90); // Delay to avoid overlaping calls 
                                                 else
                                                     await Task.Delay(180); // Delay to avoid overlaping calls 
@@ -1239,7 +1239,7 @@ namespace DOF2DMD
                                             }
                                             if (tqueue)
                                             {
-                                                if(ushort.Parse(AppSettings.dmdWidth) == 256)
+                                                if(AppSettings.dmdWidth == 256)
                                                     await Task.Delay(90); // Delay to avoid overlaping calls 
                                                 else
                                                     await Task.Delay(180); // Delay to avoid overlaping calls 
