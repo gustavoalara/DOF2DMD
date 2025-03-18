@@ -218,7 +218,7 @@ namespace DOF2DMD
             // Font configurations
             var fontConfig = new[]
             {
-                new { Path = "", ForeColor = Color.Black } // Inicialización genérica
+                new { Path = "", ForeColor = Color.Black } // Generic inicialization
             };
             if(gDmdDevice.Height == 64 && gDmdDevice.Width == 256)
             {
@@ -258,8 +258,8 @@ namespace DOF2DMD
             // Verificar si la escena actual ha expirado
             if (_currentScene != null && _currentScene.Time >= _currentScene.Pause)
             {
-                gDmdDevice.Stage.RemoveActor(_currentScene); // Eliminar la escena del escenario
-                _currentScene = null; // Limpiar la referencia
+                gDmdDevice.Stage.RemoveActor(_currentScene); // Delete scene from scenario
+                _currentScene = null; // Clean reference
                 LogIt("⏱️ AnimationTimer: Removing expired scene.");
             }
 
