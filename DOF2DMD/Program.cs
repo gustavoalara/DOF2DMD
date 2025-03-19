@@ -657,14 +657,7 @@ namespace DOF2DMD
                         duration = (isVideo && duration == 0) ? ((AnimatedActor)mediaActor).Length :
                                    (isImage && duration == 0) ? 9999 : duration;
 
-                        // Arm timer once animation is done playing
-                        //                       
-                        //if (duration >= 0) // Verificar si la duración es no negativa
-                        //{
-                        //    _animationTimer?.Dispose(); 
-                        //    _animationTimer = new Timer(AnimationTimer, null, (int)(duration * 1000), Timeout.Infinite);
-                        //}
-                        
+                       
                         //Check the video Loop
                         duration = (videoLoop) ? -1 : duration;
 
@@ -682,7 +675,14 @@ namespace DOF2DMD
                         {
                             gDmdDevice.Stage.AddActor(bg);
                         }
-
+                        
+                        // Arm timer once animation is done playing
+                                               
+                        if (duration >= 0) // Verificar si la duración es no negativa
+                        {
+                            _animationTimer?.Dispose(); 
+                            _animationTimer = new Timer(AnimationTimer, null, (int)(duration * 1000), Timeout.Infinite);
+                        }
                     };
                                             
                     LogIt($"📷Rendering {(isVideo ? $"video (duration: {duration * 1000}ms)" : "image")}: {fullPath}");
