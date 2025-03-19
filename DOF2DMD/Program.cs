@@ -1155,9 +1155,96 @@ namespace DOF2DMD
         }
         
         /// <summary>
+        /// Convert Hex Color to Int
+        /// </summary>
+        public static Color HexToColor(string hexColor)
+        {
+
+            // Convert hexadecimal to integer
+            Color _color = System.Drawing.ColorTranslator.FromHtml("#" + hexColor);
+
+            return _color;
+        }
+        /// <summary>
+        /// Check if a file with extension exists
+        /// </summary>
+        public static bool FileExistsWithExtensions(string filePath, List<string> extensions, out string foundExtension)
+        {
+            // Get the current extension of the filePath (if it exists)
+            string currentExtension = Path.GetExtension(filePath).ToLower();
+
+            // If the file already has a valid extension, check if it exists directly
+            if (extensions.Contains(currentExtension))
+            {
+                if (File.Exists(filePath))
+                {
+                    foundExtension = currentExtension;
+                    return true;
+                }
+            }
+
+            // If no valid extension is provided, try appending valid extensions
+            string fileWithoutExtension = Path.Combine(Path.GetDirectoryName(filePath), Path.GetFileNameWithoutExtension(filePath));
+            foreach (var extension in extensions)
+            {
+                string fullPath = fileWithoutExtension + extension;
+                if (File.Exists(fullPath))
+                {
+                    foundExtension = extension;
+                    return true;
+                }
+            }
+            foundExtension = null;
+            return false;
+        }
+       
+        /// <summary>
+        /// Parses the animation names to correct values
+        /// </summary>
+        public static string FormatAnimationInput(string input)
+        {
+            var validValues = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "scrollonup", "ScrollOnUp" },
+                { "scrolloffup", "ScrollOffUp" },
+                { "scrollonright", "ScrollOnRight" },
+                { "scrolloffright", "ScrollOffRight" },
+                { "scrolloffleft", "ScrollOffLeft" },
+                { "scrollonleft", "ScrollOnLeft" },
+                { "fadein", "FadeIn" },
+                { "fadeout", "FadeOut" },
+                { "scrolloffdown", "ScrollOffDown" },
+                { "scrollondown", "ScrollOnDown" },
+                { "fillfadein", "FillFadeIn" },
+                { "fillfadeout", "FillFadeOut" },
+                { "none", "None" }
+            };
+
+            return validValues.TryGetValue(input, out var formattedInput) ? formattedInput : null;
+        }
+
+        /// <summary>
+        /// Clear DMD screen
+        /// </summary>
+        private static void Blank()
+        {
+            gDmdDevice.Post(() =>
+            {
+                LogIt("Clear DMD");
+                _queue.RemoveAllScenes();
+                _animationQueue.Clear();
+                gDmdDevice.Graphics.Clear(Color.Black);
+                gDmdDevice.Stage.RemoveAll();
+                gDmdDevice.Stage.AddActor(_queue);
+                gDmdDevice.Stage.AddActor(_scoreBoard);
+                _scoreBoard.Visible = false;
+                if (_queue.IsFinished()) _queue.Visible = false;
+            });
+        }
+        
+        /// <summary>
         /// Process incoming requests
         /// </summary>
-        
         private static string ProcessRequest(string dof2dmdUrl)
         {
             dof2dmdUrl = dof2dmdUrl.Replace(" & ", "%20%26%20");    // Handle cases such as "Track & Field"
@@ -1378,95 +1465,6 @@ namespace DOF2DMD
                 return sReturn;
             }
         }
-    
-        /// <summary>
-        /// Convert Hex Color to Int
-        /// </summary>
-        public static Color HexToColor(string hexColor)
-        {
-
-            // Convert hexadecimal to integer
-            Color _color = System.Drawing.ColorTranslator.FromHtml("#" + hexColor);
-
-            return _color;
-        }
-        /// <summary>
-        /// Check if a file with extension exists
-        /// </summary>
-        public static bool FileExistsWithExtensions(string filePath, List<string> extensions, out string foundExtension)
-        {
-            // Get the current extension of the filePath (if it exists)
-            string currentExtension = Path.GetExtension(filePath).ToLower();
-
-            // If the file already has a valid extension, check if it exists directly
-            if (extensions.Contains(currentExtension))
-            {
-                if (File.Exists(filePath))
-                {
-                    foundExtension = currentExtension;
-                    return true;
-                }
-            }
-
-            // If no valid extension is provided, try appending valid extensions
-            string fileWithoutExtension = Path.Combine(Path.GetDirectoryName(filePath), Path.GetFileNameWithoutExtension(filePath));
-            foreach (var extension in extensions)
-            {
-                string fullPath = fileWithoutExtension + extension;
-                if (File.Exists(fullPath))
-                {
-                    foundExtension = extension;
-                    return true;
-                }
-            }
-            foundExtension = null;
-            return false;
-        }
-       
-        /// <summary>
-        /// Parses the animation names to correct values
-        /// </summary>
-        public static string FormatAnimationInput(string input)
-        {
-            var validValues = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "scrollonup", "ScrollOnUp" },
-                { "scrolloffup", "ScrollOffUp" },
-                { "scrollonright", "ScrollOnRight" },
-                { "scrolloffright", "ScrollOffRight" },
-                { "scrolloffleft", "ScrollOffLeft" },
-                { "scrollonleft", "ScrollOnLeft" },
-                { "fadein", "FadeIn" },
-                { "fadeout", "FadeOut" },
-                { "scrolloffdown", "ScrollOffDown" },
-                { "scrollondown", "ScrollOnDown" },
-                { "fillfadein", "FillFadeIn" },
-                { "fillfadeout", "FillFadeOut" },
-                { "none", "None" }
-            };
-
-            return validValues.TryGetValue(input, out var formattedInput) ? formattedInput : null;
-        }
-
-        /// <summary>
-        /// Clear DMD screen
-        /// </summary>
-        private static void Blank()
-        {
-            gDmdDevice.Post(() =>
-            {
-                LogIt("Clear DMD");
-                _queue.RemoveAllScenes();
-                _animationQueue.Clear();
-                gDmdDevice.Graphics.Clear(Color.Black);
-                gDmdDevice.Stage.RemoveAll();
-                gDmdDevice.Stage.AddActor(_queue);
-                gDmdDevice.Stage.AddActor(_scoreBoard);
-                _scoreBoard.Visible = false;
-                if (_queue.IsFinished()) _queue.Visible = false;
-            });
-        }
-
     class BackgroundScene : Scene
     {
         private Actor _background;
