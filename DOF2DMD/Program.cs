@@ -1355,9 +1355,9 @@ namespace DOF2DMD
                                         if (tqueue)
                                         {
                                             if(AppSettings.dmdWidth == 256)
-                                                await Task.Delay(90); // Delay to avoid overlaping calls 
+                                                Thread.Sleep(90); // Delay to avoid overlaping calls 
                                             else
-                                                await Task.Delay(180); // Delay to avoid overlaping calls 
+                                                Thread.Sleep(180); // Delay to avoid overlaping calls 
                                         }
                                         if (!DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop, tqueue))
                                         {
