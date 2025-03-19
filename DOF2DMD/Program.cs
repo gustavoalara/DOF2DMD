@@ -1203,9 +1203,9 @@ namespace DOF2DMD
                                             if (queue)
                                             {
                                                 if(AppSettings.dmdWidth == 256)
-                                                    await Task.Delay(90); // Delay to avoid overlaping calls 
+                                                    Thread.Sleep(90); // Delay to avoid overlaping calls 
                                                 else
-                                                    await Task.Delay(180); // Delay to avoid overlaping calls 
+                                                    Thread.Sleep(180); // Delay to avoid overlaping calls 
                                             }
                                             bool success = DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg);
                                             if (!success)
