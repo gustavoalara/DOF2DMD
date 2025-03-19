@@ -1133,220 +1133,7 @@ namespace DOF2DMD
                 if (dof2dmdUrl.Contains("v1/") || dof2dmdUrl.Contains("v2/"))
                 {
                     LogIt($"Received request for {req.Url}");
-                    dof2dmdUrl = dof2dmdUrl.Replace(" & ", "%20%26%20");    // Handle cases such as "Track & Field"
-                    var newUrl = new Uri(dof2dmdUrl);
-                    var query = HttpUtility.ParseQueryString(newUrl.Query);
-                    
-                    string[] urlParts = newUrl.AbsolutePath.Split('/');
-
-                    switch (urlParts[1])
-                    {
-                        case "v1":
-                            switch (urlParts[2])
-                            {
-                                case "blank":
-                                    //gGameMarquee = "";
-                                    _loopTimer?.Dispose();
-                                    Blank();
-                                    sResponse = "OK";
-                                    break;
-                                case "loopstop":
-                                    _loopTimer?.Dispose();
-                                    sResponse = "Scroll text stopped";
-                                    break;
-                                case "exit":
-                                    Blank();
-                                    // Sleep 500ms
-                                    Thread.Sleep(500);
-                                    sResponse = "exit";
-                                    break;
-                                case "version":
-                                    sResponse = "1.0";
-                                    break;
-                                case "display":
-                                    switch (urlParts[3])
-                                    {
-                                        case "picture":
-                                            //[url_prefix]/v1/display/picture?path=<image or video path>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&queue&cleanbg=<true|false>&fixed=<true|false>
-                                            string picturepath = query.Get("path");
-                                            string pFixed = query.Get("fixed") ?? "false";
-                                            float pictureduration = float.TryParse(query.Get("duration"), out float result) ? result : 0.0f;
-                                            string pictureanimation = query.Get("animation") ?? "none";
-                                            bool queue;
-                                            // Check if 'queue' exists in the query parameters
-                                            queue = dof2dmdUrl.Contains("&queue") || dof2dmdUrl.EndsWith("?queue");
-
-                                            if (StringComparer.OrdinalIgnoreCase.Compare(pFixed, "true") == 0)
-                                            {
-                                                pictureduration = -1.0f;
-                                            }
-                                            if (!picturepath.Contains("mameoutput"))
-                                            {
-                                                // This is certainly a game marquee, provided during new game
-                                                // If path corresponds to an existing file, set game marquee
-                                                //List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
-                                                List<string> extensions = new List<string> { ".png", ".jpg", ".bmp" };
-                                                if (FileExistsWithExtensions(HttpUtility.UrlDecode(AppSettings.artworkPath + "/" + picturepath), extensions, out string foundExtension))
-                                                {
-                                                    SetGameMarquee(picturepath);
-                                                    LogIt($"Setting Game Marquee to: {picturepath}");
-                                                }
-                                                // Reset scores for all players
-                                                for (int i = 1; i <= 4; i++)
-                                                    gScore[i] = 0;
-                                            }
-                                            bool pcleanbg;
-                                            if (!bool.TryParse(query.Get("cleanbg"), out pcleanbg))
-                                            {
-                                                pcleanbg = true; // default value if the conversion fails
-                                            }
-                                            if (queue)
-                                            {
-                                                if(AppSettings.dmdWidth == 256)
-                                                    Thread.Sleep(90); // Delay to avoid overlaping calls 
-                                                else
-                                                    Thread.Sleep(180); // Delay to avoid overlaping calls 
-                                            }
-                                            bool success = DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg);
-                                            if (!success)
-                                            {
-                                                sResponse = $"Picture or video not found: {picturepath}";
-                                            }
-                                            break;
-                                        case "text":
-                                            string text = query.Get("text") ?? "";
-                                            string size = query.Get("size") ?? "M";
-                                            string color = query.Get("color") ?? "FFFFFF";
-                                            string font = query.Get("font") ?? "Consolas";
-                                            string bordercolor = query.Get("bordercolor") ?? "000000";
-                                            int bordersize = int.TryParse(query.Get("bordersize"), out int bresult) ? bresult : 0;
-                                            string animation = query.Get("animation") ?? "none";
-                                            float textduration = float.TryParse(query.Get("duration"), out float tresult) ? tresult : 5.0f;
-                                            LogIt($"Text is now set to: {text} with size {size}, color {color}, font {font}, border color {bordercolor}, border size {bordersize}, animation {animation} with a duration of {textduration} seconds");
-                                            bool tqueue;
-                                            // Check if 'queue' exists in the query parameters
-                                            tqueue = dof2dmdUrl.Contains("&queue") || dof2dmdUrl.EndsWith("?queue");
-                                            
-                                            bool cleanbg;
-                                            if (!bool.TryParse(query.Get("cleanbg"), out cleanbg))
-                                            {
-                                                cleanbg = true; // default value if the conversion fails
-                                            }
-                                            bool loop;
-                                            if (!bool.TryParse(query.Get("loop"), out loop))
-                                            {
-                                                loop = false; // default value if the conversion fails
-                                            }
-                                            if (tqueue)
-                                            {
-                                                if(AppSettings.dmdWidth == 256)
-                                                    await Task.Delay(90); // Delay to avoid overlaping calls 
-                                                else
-                                                    await Task.Delay(180); // Delay to avoid overlaping calls 
-                                            }
-                                            if (!DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop, tqueue))
-                                            {
-                                                sResponse = "Error when displaying text";
-                                            }
-                                            break;
-                                        case "advanced":
-                                            string advtext = query.Get("text") ?? "";
-                                            string advpath = query.Get("path") ?? "";
-                                            string advsize = query.Get("size") ?? "M";
-                                            string advcolor = query.Get("color") ?? "FFFFFF";
-                                            string advfont = query.Get("font") ?? "Consolas";
-                                            string advbordercolor = query.Get("bordercolor") ?? "0000FF";
-                                            string advbordersize = query.Get("bordersize") ?? "0";
-                                            string animationIn = query.Get("animationin") ?? "none";
-                                            string animationOut = query.Get("animationout") ?? "none";
-                                            float advtextduration = float.TryParse(query.Get("duration"), out float aresult) ? aresult : 5.0f;
-                                            LogIt($"Advanced Text is now set to: {advtext} with size {advsize}, color {advcolor}, font {advfont}, border color {advbordercolor}, border size {advbordersize}, animation In {animationIn}, animation Out {animationOut} with a duration of {advtextduration} seconds");
-                                            bool advcleanbg;
-                                            if (!bool.TryParse(query.Get("cleanbg"), out advcleanbg))
-                                            {
-                                                cleanbg = true; // default value if the conversion fails
-                                            }
-
-                                            if (!AdvancedDisplay(advtext, advpath, advsize, advcolor, advfont, advbordercolor, advbordersize, advcleanbg, animationIn, animationOut, advtextduration))
-                                            {
-                                                sResponse = "Error when displaying advanced scene";
-                                            }
-                                            break;
-                                        case "score":
-                                            // [url_prefix]/v1/display/score?players=<number of players>&player=<active player>&score=<score>&cleanbg=<true|false>
-                                            gActivePlayer = int.TryParse(query.Get("player"), out int parsedAPlayer) ? parsedAPlayer : gActivePlayer;
-                                            gScore[gActivePlayer] = int.Parse(query.Get("score"));
-                                            gNbPlayers = int.TryParse(query.Get("players"), out int parsedPlayers) ? parsedPlayers : gNbPlayers;
-                                            gCredits = int.TryParse(query.Get("credits"), out int parsedCredits) ? parsedCredits : gCredits;
-                                            bool sCleanbg;
-                                            if (!bool.TryParse(query.Get("cleanbg"), out sCleanbg))
-                                            {
-                                                sCleanbg = true; // default value if the conversion failsa
-                                            }
-
-                                            if (!DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], sCleanbg, gCredits))
-                                            {
-                                                sResponse = "Error when displaying score board";
-                                            }
-
-                                            break;
-                                        case "scorebackground":
-                                            //[url_prefix]/v1/display/scorebackground?path=<path>
-                                            string scorebgpath = query.Get("path") ?? "";
-                                            if (!DisplayScoreBackground(scorebgpath))
-                                            {
-                                                sResponse = "Error when displaying score board background";
-                                            }
-                                            break;
-                                        case "highscores":
-                                            if (!AppSettings.hi2txt_enabled)
-                                            {
-                                                LogIt($"Highscores is not enabled");
-                                                break;
-                                            }
-                                            string hgame = query.Get("game") ?? "";
-                                            string hsize = query.Get("size") ?? "M";
-                                            string hcolor = query.Get("color") ?? "FFFFFF";
-                                            string hfont = query.Get("font") ?? "Consolas";
-                                            string hbordercolor = query.Get("bordercolor") ?? "000000";
-                                            int hbordersize = int.TryParse(query.Get("bordersize"), out int hbresult) ? hbresult : 0;
-                                            string hanimation = query.Get("animation") ?? "ScrollUp";
-                                            hanimation = (hanimation == "ScrollDown" || hanimation == "ScrollUp") ? hanimation : "ScrollUp";
-                                            float hduration = float.TryParse(query.Get("duration"), out float hresult) ? hresult : 15.0f;
-                                            LogIt($"Highscore is now set to game {hgame} with size {hsize}, color {hcolor}, font {hfont}, border color {hbordercolor}, border size {hbordersize}, animation {hanimation} with a duration of {hduration} seconds");
-                                            bool hiqueue;
-                                            // Check if 'queue' exists in the query parameters
-                                            hiqueue = dof2dmdUrl.Contains("&queue") || dof2dmdUrl.EndsWith("?queue");
-                                            bool hcleanbg;
-                                            if (!bool.TryParse(query.Get("cleanbg"), out hcleanbg))
-                                            {
-                                                hcleanbg = true; // default value if the conversion fails
-                                            }
-                                            bool hloop;
-                                            if (!bool.TryParse(query.Get("loop"), out hloop))
-                                            {
-                                                hloop = false; // default value if the conversion fails
-                                            }
-
-                                            if (!DisplayHighscores(hgame, hsize, hcolor, hfont, hbordercolor, hbordersize, hcleanbg, hanimation, hduration, hloop, hiqueue))
-                                            {
-                                                sResponse = "Error when displaying highscores";
-                                            }
-                                            break;
-                                        default:
-                                            sResponse = "Not implemented";
-                                            break;
-                                    }
-                                    break;
-                                default:
-                                    sResponse = "Not implemented";
-                                    break;
-                            }
-                            break;
-                        default:
-                            sResponse = "Not implemented";
-                            break;
-                    }
+                    sResponse = ProcessRequest(dof2dmdUrl);
                 }
                 // LogIt($"Response: {sResponse}");
                 resp.StatusCode = 200;
@@ -1366,7 +1153,230 @@ namespace DOF2DMD
             }
             gDmdDevice.Run = false;
         }
+        
+        /// <summary>
+        /// Process incoming requests
+        /// </summary>
+        private static string ProcessRequest(string dof2dmdUrl)
+        {
+            dof2dmdUrl = dof2dmdUrl.Replace(" & ", "%20%26%20");    // Handle cases such as "Track & Field"
+            var newUrl = new Uri(dof2dmdUrl);
+            var query = HttpUtility.ParseQueryString(newUrl.Query);
+            string sReturn = "OK";
 
+            string[] urlParts = newUrl.AbsolutePath.Split('/');
+
+                switch (urlParts[1])
+                {
+                    case "v1":
+                        switch (urlParts[2])
+                        {
+                            case "blank":
+                                //gGameMarquee = "";
+                                _loopTimer?.Dispose();
+                                Blank();
+                                sReturn = "OK";
+                                break;
+                            case "loopstop":
+                                _loopTimer?.Dispose();
+                                sReturn = "Scroll text stopped";
+                                break;
+                            case "exit":
+                                Blank();
+                                // Sleep 500ms
+                                Thread.Sleep(500);
+                                sReturn = "exit";
+                                break;
+                            case "version":
+                                sReturn = "1.0";
+                                break;
+                            case "display":
+                                switch (urlParts[3])
+                                {
+                                    case "picture":
+                                        //[url_prefix]/v1/display/picture?path=<image or video path>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&queue&cleanbg=<true|false>&fixed=<true|false>
+                                        string picturepath = query.Get("path");
+                                        string pFixed = query.Get("fixed") ?? "false";
+                                        float pictureduration = float.TryParse(query.Get("duration"), out float result) ? result : 0.0f;
+                                        string pictureanimation = query.Get("animation") ?? "none";
+                                        bool queue;
+                                        // Check if 'queue' exists in the query parameters
+                                        queue = dof2dmdUrl.Contains("&queue") || dof2dmdUrl.EndsWith("?queue");
+
+                                        if (StringComparer.OrdinalIgnoreCase.Compare(pFixed, "true") == 0)
+                                        {
+                                            pictureduration = -1.0f;
+                                        }
+                                        if (!picturepath.Contains("mameoutput"))
+                                        {
+                                            // This is certainly a game marquee, provided during new game
+                                            // If path corresponds to an existing file, set game marquee
+                                            //List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
+                                            List<string> extensions = new List<string> { ".png", ".jpg", ".bmp" };
+                                            if (FileExistsWithExtensions(HttpUtility.UrlDecode(AppSettings.artworkPath + "/" + picturepath), extensions, out string foundExtension))
+                                            {
+                                                SetGameMarquee(picturepath);
+                                                LogIt($"Setting Game Marquee to: {picturepath}");
+                                            }
+                                            // Reset scores for all players
+                                            for (int i = 1; i <= 4; i++)
+                                                gScore[i] = 0;
+                                        }
+                                        bool pcleanbg;
+                                        if (!bool.TryParse(query.Get("cleanbg"), out pcleanbg))
+                                        {
+                                            pcleanbg = true; // default value if the conversion fails
+                                        }
+                                        if (queue)
+                                        {
+                                            if(AppSettings.dmdWidth == 256)
+                                                Thread.Sleep(90); // Delay to avoid overlaping calls 
+                                            else
+                                                Thread.Sleep(180); // Delay to avoid overlaping calls 
+                                        }
+                                        bool success = DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg);
+                                        if (!success)
+                                        {
+                                            sReturn = = $"Picture or video not found: {picturepath}";
+                                        }
+                                        break;
+                                    case "text":
+                                        string text = query.Get("text") ?? "";
+                                        string size = query.Get("size") ?? "M";
+                                        string color = query.Get("color") ?? "FFFFFF";
+                                        string font = query.Get("font") ?? "Consolas";
+                                        string bordercolor = query.Get("bordercolor") ?? "000000";
+                                        int bordersize = int.TryParse(query.Get("bordersize"), out int bresult) ? bresult : 0;
+                                        string animation = query.Get("animation") ?? "none";
+                                        float textduration = float.TryParse(query.Get("duration"), out float tresult) ? tresult : 5.0f;
+                                        LogIt($"Text is now set to: {text} with size {size}, color {color}, font {font}, border color {bordercolor}, border size {bordersize}, animation {animation} with a duration of {textduration} seconds");
+                                        bool tqueue;
+                                        // Check if 'queue' exists in the query parameters
+                                        tqueue = dof2dmdUrl.Contains("&queue") || dof2dmdUrl.EndsWith("?queue");
+                                        
+                                        bool cleanbg;
+                                        if (!bool.TryParse(query.Get("cleanbg"), out cleanbg))
+                                        {
+                                            cleanbg = true; // default value if the conversion fails
+                                        }
+                                        bool loop;
+                                        if (!bool.TryParse(query.Get("loop"), out loop))
+                                        {
+                                            loop = false; // default value if the conversion fails
+                                        }
+                                        if (tqueue)
+                                        {
+                                            if(AppSettings.dmdWidth == 256)
+                                                await Task.Delay(90); // Delay to avoid overlaping calls 
+                                            else
+                                                await Task.Delay(180); // Delay to avoid overlaping calls 
+                                        }
+                                        if (!DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop, tqueue))
+                                        {
+                                            sReturn = "Error when displaying text";
+                                        }
+                                        break;
+                                    case "advanced":
+                                        string advtext = query.Get("text") ?? "";
+                                        string advpath = query.Get("path") ?? "";
+                                        string advsize = query.Get("size") ?? "M";
+                                        string advcolor = query.Get("color") ?? "FFFFFF";
+                                        string advfont = query.Get("font") ?? "Consolas";
+                                        string advbordercolor = query.Get("bordercolor") ?? "0000FF";
+                                        string advbordersize = query.Get("bordersize") ?? "0";
+                                        string animationIn = query.Get("animationin") ?? "none";
+                                        string animationOut = query.Get("animationout") ?? "none";
+                                        float advtextduration = float.TryParse(query.Get("duration"), out float aresult) ? aresult : 5.0f;
+                                        LogIt($"Advanced Text is now set to: {advtext} with size {advsize}, color {advcolor}, font {advfont}, border color {advbordercolor}, border size {advbordersize}, animation In {animationIn}, animation Out {animationOut} with a duration of {advtextduration} seconds");
+                                        bool advcleanbg;
+                                        if (!bool.TryParse(query.Get("cleanbg"), out advcleanbg))
+                                        {
+                                            cleanbg = true; // default value if the conversion fails
+                                        }
+
+                                        if (!AdvancedDisplay(advtext, advpath, advsize, advcolor, advfont, advbordercolor, advbordersize, advcleanbg, animationIn, animationOut, advtextduration))
+                                        {
+                                            sReturn = "Error when displaying advanced scene";
+                                        }
+                                        break;
+                                    case "score":
+                                        // [url_prefix]/v1/display/score?players=<number of players>&player=<active player>&score=<score>&cleanbg=<true|false>
+                                        gActivePlayer = int.TryParse(query.Get("player"), out int parsedAPlayer) ? parsedAPlayer : gActivePlayer;
+                                        gScore[gActivePlayer] = int.Parse(query.Get("score"));
+                                        gNbPlayers = int.TryParse(query.Get("players"), out int parsedPlayers) ? parsedPlayers : gNbPlayers;
+                                        gCredits = int.TryParse(query.Get("credits"), out int parsedCredits) ? parsedCredits : gCredits;
+                                        bool sCleanbg;
+                                        if (!bool.TryParse(query.Get("cleanbg"), out sCleanbg))
+                                        {
+                                            sCleanbg = true; // default value if the conversion failsa
+                                        }
+
+                                        if (!DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], sCleanbg, gCredits))
+                                        {
+                                            sReturn = "Error when displaying score board";
+                                        }
+
+                                        break;
+                                    case "scorebackground":
+                                        //[url_prefix]/v1/display/scorebackground?path=<path>
+                                        string scorebgpath = query.Get("path") ?? "";
+                                        if (!DisplayScoreBackground(scorebgpath))
+                                        {
+                                            sReturn = "Error when displaying score board background";
+                                        }
+                                        break;
+                                    case "highscores":
+                                        if (!AppSettings.hi2txt_enabled)
+                                        {
+                                            LogIt($"Highscores is not enabled");
+                                            break;
+                                        }
+                                        string hgame = query.Get("game") ?? "";
+                                        string hsize = query.Get("size") ?? "M";
+                                        string hcolor = query.Get("color") ?? "FFFFFF";
+                                        string hfont = query.Get("font") ?? "Consolas";
+                                        string hbordercolor = query.Get("bordercolor") ?? "000000";
+                                        int hbordersize = int.TryParse(query.Get("bordersize"), out int hbresult) ? hbresult : 0;
+                                        string hanimation = query.Get("animation") ?? "ScrollUp";
+                                        hanimation = (hanimation == "ScrollDown" || hanimation == "ScrollUp") ? hanimation : "ScrollUp";
+                                        float hduration = float.TryParse(query.Get("duration"), out float hresult) ? hresult : 15.0f;
+                                        LogIt($"Highscore is now set to game {hgame} with size {hsize}, color {hcolor}, font {hfont}, border color {hbordercolor}, border size {hbordersize}, animation {hanimation} with a duration of {hduration} seconds");
+                                        bool hiqueue;
+                                        // Check if 'queue' exists in the query parameters
+                                        hiqueue = dof2dmdUrl.Contains("&queue") || dof2dmdUrl.EndsWith("?queue");
+                                        bool hcleanbg;
+                                        if (!bool.TryParse(query.Get("cleanbg"), out hcleanbg))
+                                        {
+                                            hcleanbg = true; // default value if the conversion fails
+                                        }
+                                        bool hloop;
+                                        if (!bool.TryParse(query.Get("loop"), out hloop))
+                                        {
+                                            hloop = false; // default value if the conversion fails
+                                        }
+
+                                        if (!DisplayHighscores(hgame, hsize, hcolor, hfont, hbordercolor, hbordersize, hcleanbg, hanimation, hduration, hloop, hiqueue))
+                                        {
+                                            sReturn = "Error when displaying highscores";
+                                        }
+                                        break;
+                                    default:
+                                        sReturn = "Not implemented";
+                                        break;
+                                }
+                                break;
+                            default:
+                                sReturn = "Not implemented";
+                                break;
+                        }
+                        break;
+                    default:
+                        sReturn = "Not implemented";
+                        break;
+                }  
+                return sReturn;
+            }
+        }
         /// <summary>
         /// Convert Hex Color to Int
         /// </summary>
