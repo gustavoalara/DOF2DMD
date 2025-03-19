@@ -1157,6 +1157,7 @@ namespace DOF2DMD
         /// <summary>
         /// Process incoming requests
         /// </summary>
+        
         private static string ProcessRequest(string dof2dmdUrl)
         {
             dof2dmdUrl = dof2dmdUrl.Replace(" & ", "%20%26%20");    // Handle cases such as "Track & Field"
@@ -1237,7 +1238,7 @@ namespace DOF2DMD
                                         bool success = DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg);
                                         if (!success)
                                         {
-                                            sReturn = = $"Picture or video not found: {picturepath}";
+                                            sReturn = $"Picture or video not found: {picturepath}";
                                         }
                                         break;
                                     case "text":
@@ -1377,6 +1378,7 @@ namespace DOF2DMD
                 return sReturn;
             }
         }
+    
         /// <summary>
         /// Convert Hex Color to Int
         /// </summary>
@@ -1465,7 +1467,6 @@ namespace DOF2DMD
             });
         }
 
-    }
     class BackgroundScene : Scene
     {
         private Actor _background;
