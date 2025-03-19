@@ -658,10 +658,9 @@ namespace DOF2DMD
                                    (isImage && duration == 0) ? 9999 : duration;
 
                         // Arm timer once animation is done playing
-                        
+                        _animationTimer?.Dispose();                        
                         if (duration >= 0) // Verificar si la duración es no negativa
                         {
-                            _animationTimer?.Dispose();
                             _animationTimer = new Timer(AnimationTimer, null, (int)(duration * 1000), Timeout.Infinite);
                         }
                         //Check the video Loop
