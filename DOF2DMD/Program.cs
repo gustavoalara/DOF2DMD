@@ -1315,13 +1315,6 @@ namespace DOF2DMD
                                         {
                                             pcleanbg = true; // default value if the conversion fails
                                         }
-                                        if (queue)
-                                        {
-                                            if(AppSettings.dmdWidth == 256)
-                                                Thread.Sleep(90); // Delay to avoid overlaping calls 
-                                            else
-                                                Thread.Sleep(180); // Delay to avoid overlaping calls 
-                                        }
                                         bool success = DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg);
                                         if (!success)
                                         {
@@ -1351,13 +1344,6 @@ namespace DOF2DMD
                                         if (!bool.TryParse(query.Get("loop"), out loop))
                                         {
                                             loop = false; // default value if the conversion fails
-                                        }
-                                        if (tqueue)
-                                        {
-                                            if(AppSettings.dmdWidth == 256)
-                                                Thread.Sleep(90); // Delay to avoid overlaping calls 
-                                            else
-                                                Thread.Sleep(180); // Delay to avoid overlaping calls 
                                         }
                                         if (!DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop, tqueue))
                                         {
