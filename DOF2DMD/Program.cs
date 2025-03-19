@@ -90,7 +90,7 @@ namespace DOF2DMD
         private static readonly object _animationQueueLock = new object();
         private static readonly object _textQueueLock = new object();
         private static readonly object sceneLock = new object();
-        private static Sequence _queue;
+        private static Sequence _SequenceQueue;
 
 
         public static ScoreBoard _scoreBoard;
@@ -189,7 +189,7 @@ namespace DOF2DMD
             };
 
             // Initialize sequence
-            _queue = new Sequence(gDmdDevice) { FillParent = true };
+            _SequenceQueue = new Sequence(gDmdDevice) { FillParent = true };
 
             // Initialize fonts
             var fonts = InitializeFonts(gDmdDevice, grayColor);
@@ -204,7 +204,7 @@ namespace DOF2DMD
             { Visible = false };
 
             // Add actors to stage
-            gDmdDevice.Stage.AddActor(_queue);
+            gDmdDevice.Stage.AddActor(_SequenceQueue);
             gDmdDevice.Stage.AddActor(_scoreBoard);
 
             // Set and display game marquee
@@ -413,7 +413,7 @@ namespace DOF2DMD
             try
             {
                 
-                _queue.Visible = !cleanbg;
+                _SequenceQueue.Visible = !cleanbg;
 
                 //gDmdDevice.LockRenderThread();
                 gDmdDevice.Post(() =>
@@ -597,7 +597,7 @@ namespace DOF2DMD
                             // Clear existing resources
                             if (cleanbg)
                             {
-                                _queue.RemoveAllScenes();
+                                _SequenceQueue.RemoveAllScenes();
                                 gDmdDevice.Graphics.Clear(Color.Black);
                                 _loopTimer?.Dispose();
                             }
@@ -669,12 +669,12 @@ namespace DOF2DMD
 
                         BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration);
                         _currentScene = bg; // Almacenar la referencia a la escena actual
-                        _queue.Visible = true;
+                        _SequenceQueue.Visible = true;
 
                         // Add scene to the queue or directly to the stage
                         if (cleanbg)
                         {
-                            _queue.Enqueue(bg);
+                            _SequenceQueue.Enqueue(bg);
                             _loopTimer?.Dispose();
                         }
                         else
@@ -859,7 +859,7 @@ namespace DOF2DMD
                         var currentActor = new Actor();
                         if (cleanbg)
                         {
-                            _queue.RemoveAllScenes();
+                            _SequenceQueue.RemoveAllScenes();
                             _loopTimer?.Dispose();
                         }
     
@@ -872,12 +872,12 @@ namespace DOF2DMD
                         // Create background scene based on animation type
                         BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), currentActor, text, myFont, duration);
                         _currentScene = bg;
-                        _queue.Visible = true;
+                        _SequenceQueue.Visible = true;
     
                         // Add scene to the queue or directly to the stage
                         if (cleanbg)
                         {
-                            _queue.Enqueue(bg);
+                            _SequenceQueue.Enqueue(bg);
                             _loopTimer?.Dispose();
                         }
                         else
@@ -1028,7 +1028,7 @@ namespace DOF2DMD
 
                     if (cleanbg)
                     {
-                        _queue.RemoveAllScenes();
+                        _SequenceQueue.RemoveAllScenes();
                         _loopTimer?.Dispose();
                     }
 
@@ -1039,7 +1039,7 @@ namespace DOF2DMD
                                                (AnimationType)Enum.Parse(typeof(AnimationType), FormatAnimationInput(animationOut)),
                                                "");
                     _currentScene = bg;
-                    _queue.Visible = true;
+                    _SequenceQueue.Visible = true;
                     gDmdDevice.Graphics.Clear(Color.Black);
                     _scoreBoard.Visible = false;
                     _scoreDelayTimer?.Dispose();
@@ -1047,7 +1047,7 @@ namespace DOF2DMD
                     // Add scene to the queue or directly to the stage
                     if (cleanbg)
                     {
-                        _queue.Enqueue(bg);
+                        _SequenceQueue.Enqueue(bg);
                         _loopTimer?.Dispose();
                     }
                     else
@@ -1231,14 +1231,14 @@ namespace DOF2DMD
             gDmdDevice.Post(() =>
             {
                 LogIt("Clear DMD");
-                _queue.RemoveAllScenes();
+                _SequenceQueue.RemoveAllScenes();
                 _animationQueue.Clear();
                 gDmdDevice.Graphics.Clear(Color.Black);
                 gDmdDevice.Stage.RemoveAll();
-                gDmdDevice.Stage.AddActor(_queue);
+                gDmdDevice.Stage.AddActor(_SequenceQueue);
                 gDmdDevice.Stage.AddActor(_scoreBoard);
                 _scoreBoard.Visible = false;
-                if (_queue.IsFinished()) _queue.Visible = false;
+                if (_SequenceQueue.IsFinished()) _SequenceQueue.Visible = false;
             });
         }
         
