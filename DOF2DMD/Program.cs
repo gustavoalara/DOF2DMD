@@ -711,10 +711,11 @@ private static List<Actor> GetAllActors(object parent)
                     
                      // Execute initial action
                     gDmdDevice.Post(displayAction);
-        
+                    
+                });
+                
                 // Return true immediately after validation, while display processing continues in background
                 return true;
-                });
             }
             catch (Exception ex)
             {
