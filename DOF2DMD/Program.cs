@@ -578,7 +578,7 @@ private static List<Actor> GetAllActors(object parent)
                 }
         
                 // Now that we've validated everything, process the display asynchronously
-                = Task.Run(() =>
+                _ = Task.Run(() =>
                 {
                     LogIt($"🎞️DisplayPicture: Starting visualization of {path}, Duration: {duration}, cleanbg: {cleanbg}, toQueue: {toQueue}"); 
                     // Check if gDmdDevice is initialized
