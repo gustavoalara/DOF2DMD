@@ -700,12 +700,18 @@ private static List<Actor> GetAllActors(object parent)
                         }
                         
                         // Arm timer once animation is done playing
-
+                        Timer animationTimer = null;
                         if (duration >= 0)
                         {
                             LogIt($"⏳AnimationTimer: Duration is great than 0, calling animation timer for {path}");
-                             _animationTimer?.Dispose(); 
-                            _animationTimer = new Timer(AnimationTimer, null, (int)(duration * 1000), Timeout.Infinite);
+                             animationTimer = new Timer((state) =>
+                                {
+                                    lock (_lockObject) 
+                                    {
+                                        AnimationTimer(state);
+                                    }
+                                    animationTimer.Dispose(); // Dispose del timer
+                                }, null, (int)(duration * 1000), Timeout.Infinite);
                         }
                     };
                                             
