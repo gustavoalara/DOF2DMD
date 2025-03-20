@@ -706,7 +706,7 @@ private static List<Actor> GetAllActors(object parent)
                             LogIt($"⏳AnimationTimer: Duration is great than 0, calling animation timer for {path}");
                              animationTimer = new Timer((state) =>
                                 {
-                                    lock (_lockObject) 
+                                    lock (sceneLock) 
                                     {
                                         AnimationTimer(state);
                                     }
