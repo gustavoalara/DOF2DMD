@@ -148,27 +148,27 @@ namespace DOF2DMD
             Trace.Listeners.Add(new ConsoleTraceListener());
             Trace.AutoFlush = true;
 
-            LogIt($"Starting DOF2DMD v{Assembly.GetExecutingAssembly().GetName().Version}...");
-            LogIt("Starting HTTP listener");
+            LogIt($"🏁Starting DOF2DMD v{Assembly.GetExecutingAssembly().GetName().Version}...");
+            LogIt("🚦Starting HTTP listener");
             HttpListener listener = new HttpListener();
             listener.Prefixes.Add($"{AppSettings.UrlPrefix}/");
             listener.Start();
-            LogIt($"DOF2DMD is now listening for requests on {AppSettings.UrlPrefix}...");
+            LogIt($"👂DOF2DMD is now listening for requests on {AppSettings.UrlPrefix}...");
 
             // Initialize DMD in parallel
-            LogIt("Starting DMD initialization");
+            LogIt("🏁Starting DMD initialization");
             var dmdInitTask = Task.Run(() => InitializeDMD());
 
             // Start handling HTTP connections
-            LogIt("Starting HTTP connection handler");
+            LogIt("🚦Starting HTTP connection handler");
             var listenTask = HandleIncomingConnections(listener);
 
             // Wait for DMD initialization to complete
-            LogIt("Waiting for DMD initialization to complete");
+            LogIt("⌚Waiting for DMD initialization to complete");
             await dmdInitTask;
 
             // Wait for the HTTP listener
-            LogIt("DOF2DMD now fully initialized!");
+            LogIt("👌DOF2DMD now fully initialized!");
             await listenTask;
         }
 
@@ -277,7 +277,7 @@ private static List<Actor> GetAllActors(object parent)
             // Verify if current scene is over
             if (_currentScene != null && _currentScene.Time >= _currentScene.Pause)
             {
-                LogIt("⏱️ AnimationTimer: Removing expired scene {_currentScene.Name}");
+                LogIt($"⏱️ AnimationTimer: Removing expired scene {_currentScene?.Name}");
                 gDmdDevice.Stage.RemoveActor(_currentScene); // Delete scene from scenario
                 _currentScene = null; // Clean reference
                 
