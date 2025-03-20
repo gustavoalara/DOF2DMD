@@ -209,7 +209,7 @@ namespace DOF2DMD
 
             // Set and display game marquee
             SetGameMarquee(AppSettings.StartPicture);
-            DisplayPicture(GetGameMarquee(), -1, "none", false, true);
+            await DisplayPicture(GetGameMarquee(), -1, "none", false, true);
         }
 
         private static (FlexDMD.Font TextFont, FlexDMD.Font NormalFont, FlexDMD.Font HighlightFont) InitializeFonts(
@@ -308,7 +308,7 @@ private static List<Actor> GetAllActors(object parent)
                     
                     if(!string.IsNullOrEmpty(item.Path))
                     {
-                        DisplayPicture(item.Path, item.Duration, item.Animation, false, item.Cleanbg);
+                        await DisplayPicture(item.Path, item.Duration, item.Animation, false, item.Cleanbg);
                     }
                     else if(!string.IsNullOrEmpty(item.Text))
                     {
@@ -354,7 +354,7 @@ private static List<Actor> GetAllActors(object parent)
             {
                 try
                 {
-                    DisplayPicture(GetGameMarquee(), -1, "none", false, true);
+                    await DisplayPicture(GetGameMarquee(), -1, "none", false, true);
                 }
                 finally
                 {
@@ -1340,7 +1340,7 @@ private static List<Actor> GetAllActors(object parent)
                                         {
                                             pcleanbg = true; // default value if the conversion fails
                                         }
-                                        bool success = DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg);
+                                        bool success = await DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg);
                                         if (!success)
                                         {
                                             sReturn = $"Picture or video not found: {picturepath}";
