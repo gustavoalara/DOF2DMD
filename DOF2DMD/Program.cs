@@ -271,12 +271,13 @@ private static List<Actor> GetAllActors(object parent)
         private static void AnimationTimer(object state)
         {
             LogIt("AnimationTimer: Starting...");
+            LogIt($"AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
             _animationTimer.Dispose();
             _animationTimer = null;
             // Verify if current scene is over
             if (_currentScene != null && _currentScene.Time >= _currentScene.Pause)
             {
-                LogIt("⏱️ AnimationTimer: Removing expired scene {_currentScene.Name}.");
+                LogIt("⏱️ AnimationTimer: Removing expired scene {_currentScene.Time}.");
                 gDmdDevice.Stage.RemoveActor(_currentScene); // Delete scene from scenario
                 _currentScene = null; // Clean reference
                 
