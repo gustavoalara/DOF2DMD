@@ -245,7 +245,7 @@ namespace DOF2DMD
             );
         }
 
-private static List<Actor> GetAllActors(Actor parent)
+private static List<Actor> GetAllActors(object parent)
 {
     List<Actor> actors = new List<Actor>();
 
@@ -256,9 +256,9 @@ private static List<Actor> GetAllActors(Actor parent)
             actors.AddRange(GetAllActors(child)); // Recursive call
         }
     }
-    else
+    else if (parent is Actor actor)
     {
-        actors.Add(parent);
+        actors.Add(actor);
     }
 
     return actors;
