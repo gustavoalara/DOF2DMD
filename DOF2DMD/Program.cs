@@ -209,7 +209,7 @@ namespace DOF2DMD
 
             // Set and display game marquee
             SetGameMarquee(AppSettings.StartPicture);
-            await DisplayPicture(GetGameMarquee(), -1, "none", false, true);
+            DisplayPicture(GetGameMarquee(), -1, "none", false, true);
         }
 
         private static (FlexDMD.Font TextFont, FlexDMD.Font NormalFont, FlexDMD.Font HighlightFont) InitializeFonts(
@@ -308,7 +308,7 @@ private static List<Actor> GetAllActors(object parent)
                     
                     if(!string.IsNullOrEmpty(item.Path))
                     {
-                        await DisplayPicture(item.Path, item.Duration, item.Animation, false, item.Cleanbg);
+                        DisplayPicture(item.Path, item.Duration, item.Animation, false, item.Cleanbg);
                     }
                     else if(!string.IsNullOrEmpty(item.Text))
                     {
@@ -354,7 +354,7 @@ private static List<Actor> GetAllActors(object parent)
             {
                 try
                 {
-                    await DisplayPicture(GetGameMarquee(), -1, "none", false, true);
+                    DisplayPicture(GetGameMarquee(), -1, "none", false, true);
                 }
                 finally
                 {
@@ -594,7 +594,7 @@ private static List<Actor> GetAllActors(object parent)
                         if (gDmdDevice == null)
                         {
                             LogIt("🛑DMD device initialization failed 10 retries");
-                            return;
+                            //return;
                         }
     
                         // If this picture needs to be queued AND there is an animation/text running BUT current animation/text is not meant to be infinite, 
@@ -606,7 +606,7 @@ private static List<Actor> GetAllActors(object parent)
                                 LogIt($"⏳Queuing {path} for display after current animation");
                                 _animationQueue.Enqueue(new QueueItem(path, duration, animation, cleanbg));
                                 LogIt($"⏳Queue has {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => i.Path))}");
-                                return;
+                                //return;
                             }
                         }
     
