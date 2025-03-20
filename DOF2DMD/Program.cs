@@ -90,6 +90,7 @@ namespace DOF2DMD
         private static readonly object _animationQueueLock = new object();
         private static readonly object _textQueueLock = new object();
         private static readonly object sceneLock = new object();
+        private static readonly object _stageLock = new object();
         private static Sequence _SequenceQueue;
 
 
@@ -695,7 +696,10 @@ private static List<Actor> GetAllActors(object parent)
                         else
                         {
                             LogIt($"🎞️DisplayPicture: cleanbg is false, adding {path} to Stage");
-                            gDmdDevice.Stage.AddActor(bg);
+                            lock (_stageLock)
+                            {                
+                                gDmdDevice.Stage.AddActor(bg);
+                            }
                         }
                         
                         // Arm timer once animation is done playing
