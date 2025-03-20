@@ -701,7 +701,7 @@ private static List<Actor> GetAllActors(object parent)
                         
                         // Arm timer once animation is done playing
                                                
-                        /if (duration >= 0) // Verificar si la duración es no negativa
+                        if (duration >= 0)
                         {
                             LogIt($"🎞️DisplayPicture: Duration is great than 0, calling animation timer for {path}");
                             _animationTimer?.Dispose(); 
