@@ -245,7 +245,24 @@ namespace DOF2DMD
             );
         }
 
+private static List<Actor> GetAllActors(Actor parent)
+{
+    List<Actor> actors = new List<Actor>();
 
+    if (parent is Group group)
+    {
+        foreach (Actor child in group.Children)
+        {
+            actors.AddRange(GetAllActors(child)); // Recursive call
+        }
+    }
+    else
+    {
+        actors.Add(parent);
+    }
+
+    return actors;
+}
 
         /// <summary>
         /// Callback method once animation is finished.
@@ -263,7 +280,7 @@ namespace DOF2DMD
                 _currentScene = null; // Clean reference
                 LogIt("⏱️ AnimationTimer: Removing expired scene {_currentScene.Name}.");
             }
-            LogIt($"AnimationTimer: Current Actors on the scene: {string.Join(", ", gDmdDevice.Stage.Select(actor => Actor.Name))}");
+            LogIt($"AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
             // Check if there are more animations in the queue
             if (_animationQueue.Count > 0)
             {
