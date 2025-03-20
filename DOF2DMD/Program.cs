@@ -696,18 +696,18 @@ private static List<Actor> GetAllActors(object parent)
                         else
                         {
                             LogIt($"🎞️DisplayPicture: cleanbg is false, adding {path} to Stage");
-                            lock (_stageLock)
-                            {                
-                                gDmdDevice.Stage.AddActor(bg);
-                            }
+                            gDmdDevice.Stage.AddActor(bg);
                         }
                         
                         // Arm timer once animation is done playing
                                                
                         if (duration >= 0) // Verificar si la duración es no negativa
                         {
-                            _animationTimer?.Dispose(); 
-                            _animationTimer = new Timer(AnimationTimer, null, (int)(duration * 1000), Timeout.Infinite);
+                            lock (_stageLock)
+                            {  
+                                _animationTimer?.Dispose(); 
+                                _animationTimer = new Timer(AnimationTimer, null, (int)(duration * 1000), Timeout.Infinite);
+                            }
                         }
                     };
                                             
