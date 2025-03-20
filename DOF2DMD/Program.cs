@@ -1340,7 +1340,7 @@ private static List<Actor> GetAllActors(object parent)
                                         {
                                             pcleanbg = true; // default value if the conversion fails
                                         }
-                                        bool success = await DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg);
+                                        bool success DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg);
                                         if (!success)
                                         {
                                             sReturn = $"Picture or video not found: {picturepath}";
