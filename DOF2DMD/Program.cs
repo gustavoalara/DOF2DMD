@@ -276,9 +276,10 @@ private static List<Actor> GetAllActors(object parent)
             // Verify if current scene is over
             if (_currentScene != null && _currentScene.Time >= _currentScene.Pause)
             {
+                LogIt("⏱️ AnimationTimer: Removing expired scene {_currentScene.Name}.");
                 gDmdDevice.Stage.RemoveActor(_currentScene); // Delete scene from scenario
                 _currentScene = null; // Clean reference
-                LogIt("⏱️ AnimationTimer: Removing expired scene {_currentScene.Name}.");
+                
             }
             LogIt($"AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
             // Check if there are more animations in the queue
@@ -633,8 +634,8 @@ private static List<Actor> GetAllActors(object parent)
                         try
                         {
                             mediaActor = isVideo ?
-                                (Actor)gDmdDevice.NewVideo("MyVideo", fullPath) :
-                                (Actor)gDmdDevice.NewImage("MyImage", fullPath);
+                                (Actor)gDmdDevice.NewVideo("MyVideo " + path, fullPath) :
+                                (Actor)gDmdDevice.NewImage("MyImage " + path, fullPath);
 
                             mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
                         }
@@ -680,7 +681,7 @@ private static List<Actor> GetAllActors(object parent)
                         duration = (videoLoop) ? -1 : duration;
 
                         BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration, path);
-                        _currentScene = bg; // Almacenar la referencia a la escena actual
+                        _currentScene = bg; // Store reference to current scene
                         _SequenceQueue.Visible = true;
 
                         // Add scene to the queue or directly to the stage
@@ -724,26 +725,26 @@ private static List<Actor> GetAllActors(object parent)
         
 
 
-        private static BackgroundScene CreateBackgroundScene(FlexDMD.FlexDMD gDmdDevice, Actor mediaActor, string animation, float duration, string path)
+        private static BackgroundScene CreateBackgroundScene(FlexDMD.FlexDMD gDmdDevice, Actor mediaActor, string animation, float duration, string name = "")
         {
             return animation switch
             {
-                "none" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, path),
-                "fade" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.FadeIn, duration, AnimationType.FadeOut, path),
-                "left2right" => new BackgroundScene(gDmdDevice,mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffRight, path),
-                "scrollright" => new ScrollingRightPictureScene(gDmdDevice,mediaActor, AnimationType.None, duration, AnimationType.None, path),
-                "left2left" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffLeft, path),
-                "right2left" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, path),
-                "scrollleft" => new ScrollingLeftPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, path),
-                "right2right" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffRight, path),
-                "top2bottom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffDown, path),
-                "scrolldown" => new ScrollingDownPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffDown, path),
-                "top2top" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffUp, path),
-                "bottom2top" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffUp, path),
-                "scrollup" => new ScrollingUpPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffUp, path),
-                "bottom2bottom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffDown, path),
-                "zoom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ZoomIn, duration, AnimationType.ZoomOut, path),
-                _ => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, path)
+                "none" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, name),
+                "fade" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.FadeIn, duration, AnimationType.FadeOut, ""),
+                "left2right" => new BackgroundScene(gDmdDevice,mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffRight, ""),
+                "scrollright" => new ScrollingRightPictureScene(gDmdDevice,mediaActor, AnimationType.None, duration, AnimationType.None, ""),
+                "left2left" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffLeft, ""),
+                "right2left" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, ""),
+                "scrollleft" => new ScrollingLeftPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, ""),
+                "right2right" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffRight, ""),
+                "top2bottom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffDown, ""),
+                "scrolldown" => new ScrollingDownPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffDown, ""),
+                "top2top" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffUp, ""),
+                "bottom2top" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffUp, ""),
+                "scrollup" => new ScrollingUpPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffUp, ""),
+                "bottom2bottom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffDown, ""),
+                "zoom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ZoomIn, duration, AnimationType.ZoomOut, ""),
+                _ => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, "")
             };
         }
         /// <summary>
