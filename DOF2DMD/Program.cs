@@ -263,7 +263,7 @@ namespace DOF2DMD
                 _currentScene = null; // Clean reference
                 LogIt("⏱️ AnimationTimer: Removing expired scene {_currentScene.Name}.");
             }
-            LogIt($"AnimationTimer: Current Actors on the escene: {string.Join(", ", gDmdDevice.Stage.Actors.Select(actor => actor.Name))}");
+            LogIt($"AnimationTimer: Current Actors on the scene: {string.Join(", ", gDmdDevice.Stage.Actors.Select(actor => actor.Name))}");
             // Check if there are more animations in the queue
             if (_animationQueue.Count > 0)
             {
