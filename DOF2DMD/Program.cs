@@ -708,9 +708,10 @@ private static List<Actor> GetAllActors(object parent)
                             _animationTimer = new Timer(AnimationTimer, null, (int)(duration * 1000), Timeout.Infinite);
                             
                         } 
+                        Timer animationTimer = null;
                         if (duration >= 0)
                         {
-                            Timer animationTimer = new Timer((state) =>
+                            animationTimer = new Timer((state) =>
                             {
                                 AnimationTimer(state);
                                 animationTimer.Dispose(); // Eliminar el temporizador
