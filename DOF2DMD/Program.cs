@@ -270,15 +270,14 @@ private static List<Actor> GetAllActors(object parent)
         /// </summary>
         private static void AnimationTimer(object state)
         {
-            LogIt("AnimationTimer: Starting...");
-            LogIt($"AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
+            LogIt("⏱️ ⏳AnimationTimer: Starting...");
+            LogIt($"⏱️ ⏳AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
             _animationTimer.Dispose();
             _animationTimer = null;
-            string SceneName = _currentScene.Name;
             // Verify if current scene is over
             if (_currentScene != null && _currentScene.Time >= _currentScene.Pause)
             {
-                LogIt("⏱️ AnimationTimer: Removing expired scene {SceneName}.");
+                LogIt("⏱️ AnimationTimer: Removing expired scene {_currentScene.Name}");
                 gDmdDevice.Stage.RemoveActor(_currentScene); // Delete scene from scenario
                 _currentScene = null; // Clean reference
                 
@@ -507,7 +506,7 @@ private static List<Actor> GetAllActors(object parent)
             }
             catch (Exception ex)
             {
-                LogIt($"Error in fuzzy matching: {ex.Message}");
+                LogIt($"❌ Error in fuzzy matching: {ex.Message}");
                 return null;
             }
         }
@@ -517,7 +516,7 @@ private static List<Actor> GetAllActors(object parent)
         /// </summary>
         public static bool DisplayPicture(string path, float duration, string animation, bool toQueue, bool cleanbg)
         {
-            LogIt($"DisplayPicture: Starting visualization of {path}, Duration: {duration}, cleanbg: {cleanbg}, toQueue: {toQueue}"); 
+            LogIt($"🎞️DisplayPicture: Starting visualization of {path}, Duration: {duration}, cleanbg: {cleanbg}, toQueue: {toQueue}"); 
             try
             {
                 if (string.IsNullOrEmpty(path))
@@ -538,7 +537,7 @@ private static List<Actor> GetAllActors(object parent)
                 {
                     // List of possible extensions for a static marquee
                     extensions = new List<string> { ".png", ".jpg", ".bmp", ".jpeg" };
-                    LogIt($"Setting marquee to: {path}");
+                    LogIt($"⚙️ Setting marquee to: {path}");
                 }
                 else
                 {
@@ -552,7 +551,7 @@ private static List<Actor> GetAllActors(object parent)
                     var matchedFile = FindBestFuzzyMatch(localPath, extensions);
                     if (!string.IsNullOrEmpty(matchedFile))
                     {
-                        LogIt($"Exact match not found for {localPath}, but found {matchedFile} using fuzzy matching");
+                        LogIt($"⚠️Exact match not found for {localPath}, but found {matchedFile} using fuzzy matching");
                         localPath = Path.Combine(
                             Path.GetDirectoryName(matchedFile),
                             Path.GetFileNameWithoutExtension(matchedFile)
@@ -587,13 +586,13 @@ private static List<Actor> GetAllActors(object parent)
                     while (gDmdDevice == null && retries > 0)
                     {
                         Thread.Sleep(1000);
-                        LogIt($"Retrying DMD device initialization {retries} retries left");
+                        LogIt($"❗ Retrying DMD device initialization {retries} retries left");
                         retries--;
                     }
 
                     if (gDmdDevice == null)
                     {
-                        LogIt("DMD device initialization failed 10 retries");
+                        LogIt("🛑DMD device initialization failed 10 retries");
                         return;
                     }
 
@@ -636,8 +635,8 @@ private static List<Actor> GetAllActors(object parent)
                         try
                         {
                             mediaActor = isVideo ?
-                                (Actor)gDmdDevice.NewVideo("MyVideo " + path, fullPath) :
-                                (Actor)gDmdDevice.NewImage("MyImage " + path, fullPath);
+                                (Actor)gDmdDevice.NewVideo("Video: " + path, fullPath) :
+                                (Actor)gDmdDevice.NewImage("Image: " + path, fullPath);
 
                             mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
                         }
@@ -689,13 +688,13 @@ private static List<Actor> GetAllActors(object parent)
                         // Add scene to the queue or directly to the stage
                         if (cleanbg)
                         {
-                            LogIt($"DisplayPicture: cleanbg is true, enqueuing {path} in _SequenceQueue"); 
+                            LogIt($"🎞️DisplayPicture: cleanbg is true, enqueuing {path} in _SequenceQueue"); 
                             _SequenceQueue.Enqueue(bg);
                             _loopTimer?.Dispose();
                         }
                         else
                         {
-                            LogIt($"DisplayPicture: cleanbg is false, adding {path} to Stage");
+                            LogIt($"🎞️DisplayPicture: cleanbg is false, adding {path} to Stage");
                             gDmdDevice.Stage.AddActor(bg);
                         }
                         
@@ -720,7 +719,7 @@ private static List<Actor> GetAllActors(object parent)
             }
             catch (Exception ex)
             {
-                LogIt($"Error occurred while fetching the image. {ex.Message}");
+                LogIt($"⚠️Error occurred while fetching the image. {ex.Message}");
                 return false;
             }
         }
