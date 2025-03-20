@@ -516,9 +516,6 @@ private static List<Actor> GetAllActors(object parent)
         /// </summary>
         public static bool DisplayPicture(string path, float duration, string animation, bool toQueue, bool cleanbg)
         { 
-            _ = Task.Run(() =>
-                {
-            LogIt($"🎞️DisplayPicture: Starting visualization of {path}, Duration: {duration}, cleanbg: {cleanbg}, toQueue: {toQueue}"); 
             try
             {
                 if (string.IsNullOrEmpty(path))
@@ -581,7 +578,9 @@ private static List<Actor> GetAllActors(object parent)
                 }
         
                 // Now that we've validated everything, process the display asynchronously
-               
+                _ = Task.Run(() =>
+                {
+                    LogIt($"🎞️DisplayPicture: Starting visualization of {path}, Duration: {duration}, cleanbg: {cleanbg}, toQueue: {toQueue}"); 
                     // Check if gDmdDevice is initialized
                     int retries = 10;
                     while (gDmdDevice == null && retries > 0)
