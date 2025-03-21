@@ -85,13 +85,13 @@ namespace DOF2DMD
             }
         }
         private static Timer _scoreTimer;
-        private static Timer _animationTimer = null;
+        private static Timer _ = null;
         private static Timer _loopTimer;
         private static readonly object _scoreQueueLock = new object();
         private static readonly object _animationQueueLock = new object();
         private static readonly object _textQueueLock = new object();
         private static readonly object _sceneLock = new object();
-        private readonly List<Timer> _animationTimers = new List<Timer>();
+        private static readonly List<Timer> _s = new List<Timer>();
         private static Sequence _SequenceQueue;
 
 
@@ -270,34 +270,34 @@ private static List<Actor> GetAllActors(object parent)
         /// Callback method once animation is finished.
         /// Displays the player's score
         /// </summary>
-        private static void AnimationTimer(object state)
+        private static void (object state)
         {
             lock (_sceneLock)
             {
                 if (_currentScene == null)
                 {
-                    LogIt("AnimationTimer: _currentScene is null");
+                    LogIt(": _currentScene is null");
                     return;
                 }
     
                 if (gDmdDevice == null)
                 {
-                    LogIt("AnimationTimer: gDmdDevice is null");
+                    LogIt(": gDmdDevice is null");
                     return;
                 }
-                LogIt("⏱️ ⏳AnimationTimer: Starting...");
-                LogIt($"⏱️ ⏳AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
-                _animationTimer.Dispose();
-                _animationTimer = null;
+                LogIt("⏱️ ⏳: Starting...");
+                LogIt($"⏱️ ⏳: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
+                _.Dispose();
+                _ = null;
                 // Verify if current scene is over
                 if (_currentScene != null && _currentScene.Time >= _currentScene.Pause)
                 {
-                    LogIt($"⏱️ AnimationTimer: Removing expired scene {_currentScene?.Name}");
+                    LogIt($"⏱️ : Removing expired scene {_currentScene?.Name}");
                     gDmdDevice.Stage.RemoveActor(_currentScene); // Delete scene from scenario
                     _currentScene = null; // Clean reference
                     
                 }
-                LogIt($"AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
+                LogIt($": Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
                 // Check if there are more animations in the queue
                 if (_animationQueue.Count > 0)
                 {
@@ -306,11 +306,11 @@ private static List<Actor> GetAllActors(object parent)
                         var item = _animationQueue.Dequeue();
                         if(!string.IsNullOrEmpty(item.Path))
                            {
-                                LogIt($"⏱️ ⏳AnimationTimer: animation done, I will play {item.Path} next");
+                                LogIt($"⏱️ ⏳: animation done, I will play {item.Path} next");
                            }
                         else if(!string.IsNullOrEmpty(item.Text))
                            {
-                                LogIt($"⏱️ ⏳AnimationTimer: animation done, I will show {item.Text} next");
+                                LogIt($"⏱️ ⏳: animation done, I will show {item.Text} next");
                            }
                         if (_animationQueue.Count > 0 )
                         {
@@ -333,7 +333,7 @@ private static List<Actor> GetAllActors(object parent)
                 }
                 else if (AppSettings.ScoreDmd != 0)
                 {
-                    LogIt("⏱️ AnimationTimer: previous animation is done, no more animation queued, starting 1s delay before score");
+                    LogIt("⏱️ : previous animation is done, no more animation queued, starting 1s delay before score");
     
                     // Dispose existing delay timer if any
                     _scoreDelayTimer?.Dispose();
@@ -433,7 +433,7 @@ private static List<Actor> GetAllActors(object parent)
             gCredits = credits;
             _scoreDelayTimer?.Dispose();
             // If no ongoing animation or we can display score over it
-            if (_animationTimer == null || sCleanbg == false || _currentDuration == -1)
+            if (_ == null || sCleanbg == false || _currentDuration == -1)
             {
                 LogIt($"DisplayScore for player {player}: {score}");
                 DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], "", "", sCleanbg);
@@ -614,7 +614,7 @@ private static List<Actor> GetAllActors(object parent)
 
                     // If this picture needs to be queued AND there is an animation/text running BUT current animation/text is not meant to be infinite, 
                     // then add this picture and its parameters to the animation queue. The animation timer will take care of it
-                    if (toQueue && _animationTimer != null && _currentDuration > 0)
+                    if (toQueue && _ != null && _currentDuration > 0)
                     {
                         lock (_animationQueueLock)
                         {
@@ -720,7 +720,7 @@ private static List<Actor> GetAllActors(object parent)
                         {
                             LogIt($"⏳AnimationTimer: Duration is great than 0, calling animation timer for {path}");
         
-                            Timer animationTimer = new Timer((state) =>
+                            animationTimer = new Timer((state) =>
                             {
                                 lock (_sceneLock)
                                 {
@@ -728,7 +728,7 @@ private static List<Actor> GetAllActors(object parent)
                                 }
                                 lock (_animationTimers)
                                 {
-                                    _animationTimers.Remove((Timer)state);
+                                    _s.Remove((Timer)state);
                                 }
                                 ((Timer)state).Dispose();
                             }, null, (int)(duration * 1000), Timeout.Infinite);
@@ -892,7 +892,7 @@ private static List<Actor> GetAllActors(object parent)
 
                     // If this text needs to be queued AND there is an animation/text running BUT current animation/text is not meant to be infinite, 
                     // then add this text and its parameters to the animation queue. The animation timer will take care of it
-                    if (toQueue && _animationTimer != null && _currentDuration > 0)
+                    if (toQueue && _ != null && _currentDuration > 0)
                     {
                         lock (_animationQueueLock)
                         {
@@ -921,8 +921,8 @@ private static List<Actor> GetAllActors(object parent)
     
                         if (duration > 0)
                         {
-                            _animationTimer?.Dispose();
-                            _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                            _?.Dispose();
+                            _ = new Timer(, null, (int)duration * 1000 + 1000, Timeout.Infinite);
                         }
                         _currentDuration = duration;
                         // Create background scene based on animation type
