@@ -922,7 +922,7 @@ private static List<Actor> GetAllActors(object parent)
                         if (duration > 0)
                         {
                             _animationTimer?.Dispose();
-                            _animationTimer = new Timer(, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                            _animationTimer = new Timer(animationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
                         }
                         _currentDuration = duration;
                         // Create background scene based on animation type
