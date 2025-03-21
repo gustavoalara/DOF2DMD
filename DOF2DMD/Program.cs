@@ -90,8 +90,6 @@ namespace DOF2DMD
         private static readonly object _scoreQueueLock = new object();
         private static readonly object _animationQueueLock = new object();
         private static readonly object _textQueueLock = new object();
-        private static readonly object _sceneLock = new object();
-        private static readonly List<Timer> _animationTimers = new List<Timer>();
         private static Sequence _SequenceQueue;
 
 
@@ -274,17 +272,7 @@ private static List<Actor> GetAllActors(object parent)
         {
             lock (_sceneLock)
             {
-                if (_currentScene == null)
-                {
-                    LogIt(": _currentScene is null");
-                    return;
-                }
-    
-                if (gDmdDevice == null)
-                {
-                    LogIt(": gDmdDevice is null");
-                    return;
-                }
+
                 LogIt("⏱️ ⏳: Starting...");
                 LogIt($"⏱️ ⏳: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
                 
@@ -721,24 +709,8 @@ private static List<Actor> GetAllActors(object parent)
                         if (duration >= 0)
                         {
                             LogIt($"⏳AnimationTimer: Duration is great than 0, calling animation timer for {path}");
-        
-                            animationTimer = new Timer((state) =>
-                            {
-                                lock (_sceneLock)
-                                {
-                                    AnimationTimer(state);
-                                }
-                                lock (_animationTimers)
-                                {
-                                    _animationTimers.Remove((Timer)state);
-                                }
-                                ((Timer)state).Dispose();
-                            }, null, (int)(duration * 1000), Timeout.Infinite);
-        
-                            lock (_animationTimers)
-                            {
-                                _animationTimers.Add(animationTimer);
-                            }
+                            _animationTimer?.Dispose();
+                            _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
                         }
                     };
                                             
