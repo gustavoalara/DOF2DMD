@@ -91,7 +91,7 @@ namespace DOF2DMD
         private static readonly object _animationQueueLock = new object();
         private static readonly object _textQueueLock = new object();
         private static readonly object _sceneLock = new object();
-        private static readonly List<Timer> _s = new List<Timer>();
+        private static readonly List<Timer> _animationTimers = new List<Timer>();
         private static Sequence _SequenceQueue;
 
 
@@ -287,8 +287,8 @@ private static List<Actor> GetAllActors(object parent)
                 }
                 LogIt("⏱️ ⏳: Starting...");
                 LogIt($"⏱️ ⏳: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
-                _AnimationTimer.Dispose();
-                _AnimationTimer = null;
+                _animationTimer.Dispose();
+                _animationTimer = null;
                 // Verify if current scene is over
                 if (_currentScene != null && _currentScene.Time >= _currentScene.Pause)
                 {
