@@ -331,16 +331,16 @@ private static List<Actor> GetAllActors(object parent)
                         }
                     }
                 }
-            }
-            else if (AppSettings.ScoreDmd != 0)
-            {
-                LogIt("⏱️ AnimationTimer: previous animation is done, no more animation queued, starting 1s delay before score");
-
-                // Dispose existing delay timer if any
-                _scoreDelayTimer?.Dispose();
-
-                // Create new timer with 1 second delay
-                _scoreDelayTimer = new Timer(DelayedScoreDisplay, null, 1000, Timeout.Infinite);
+                else if (AppSettings.ScoreDmd != 0)
+                {
+                    LogIt("⏱️ AnimationTimer: previous animation is done, no more animation queued, starting 1s delay before score");
+    
+                    // Dispose existing delay timer if any
+                    _scoreDelayTimer?.Dispose();
+    
+                    // Create new timer with 1 second delay
+                    _scoreDelayTimer = new Timer(DelayedScoreDisplay, null, 1000, Timeout.Infinite);
+                }
             }
         }
 
