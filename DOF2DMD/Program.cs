@@ -90,7 +90,8 @@ namespace DOF2DMD
         private static readonly object _scoreQueueLock = new object();
         private static readonly object _animationQueueLock = new object();
         private static readonly object _textQueueLock = new object();
-        private static readonly object sceneLock = new object();
+        private static readonly object _sceneLock = new object();
+        private readonly List<Timer> _animationTimers = new List<Timer>();
         private static Sequence _SequenceQueue;
 
 
@@ -271,49 +272,63 @@ private static List<Actor> GetAllActors(object parent)
         /// </summary>
         private static void AnimationTimer(object state)
         {
-            LogIt("⏱️ ⏳AnimationTimer: Starting...");
-            LogIt($"⏱️ ⏳AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
-            _animationTimer.Dispose();
-            _animationTimer = null;
-            // Verify if current scene is over
-            if (_currentScene != null && _currentScene.Time >= _currentScene.Pause)
+            lock (_sceneLock)
             {
-                LogIt($"⏱️ AnimationTimer: Removing expired scene {_currentScene?.Name}");
-                gDmdDevice.Stage.RemoveActor(_currentScene); // Delete scene from scenario
-                _currentScene = null; // Clean reference
-                
-            }
-            LogIt($"AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
-            // Check if there are more animations in the queue
-            if (_animationQueue.Count > 0)
-            {
-                lock (_animationQueueLock)
+                if (_currentScene == null)
                 {
-                    var item = _animationQueue.Dequeue();
-                    if(!string.IsNullOrEmpty(item.Path))
-                       {
-                            LogIt($"⏱️ ⏳AnimationTimer: animation done, I will play {item.Path} next");
-                       }
-                    else if(!string.IsNullOrEmpty(item.Text))
-                       {
-                            LogIt($"⏱️ ⏳AnimationTimer: animation done, I will show {item.Text} next");
-                       }
-                    if (_animationQueue.Count > 0 )
-                    {
-                        LogIt($"⏱️ ⏳Animation queue has now {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => !string.IsNullOrEmpty(i.Text) ? i.Text : i.Path).Where(text => !string.IsNullOrEmpty(text)))}");
-                    }
-                    else
-                    {
-                        LogIt($"⏱️ ⏳Animation queue is now empty");
-                    }
+                    LogIt("AnimationTimer: _currentScene is null");
+                    return;
+                }
+    
+                if (gDmdDevice == null)
+                {
+                    LogIt("AnimationTimer: gDmdDevice is null");
+                    return;
+                }
+                LogIt("⏱️ ⏳AnimationTimer: Starting...");
+                LogIt($"⏱️ ⏳AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
+                _animationTimer.Dispose();
+                _animationTimer = null;
+                // Verify if current scene is over
+                if (_currentScene != null && _currentScene.Time >= _currentScene.Pause)
+                {
+                    LogIt($"⏱️ AnimationTimer: Removing expired scene {_currentScene?.Name}");
+                    gDmdDevice.Stage.RemoveActor(_currentScene); // Delete scene from scenario
+                    _currentScene = null; // Clean reference
                     
-                    if(!string.IsNullOrEmpty(item.Path))
+                }
+                LogIt($"AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
+                // Check if there are more animations in the queue
+                if (_animationQueue.Count > 0)
+                {
+                    lock (_animationQueueLock)
                     {
-                        DisplayPicture(item.Path, item.Duration, item.Animation, false, item.Cleanbg);
-                    }
-                    else if(!string.IsNullOrEmpty(item.Text))
-                    {
-                        DisplayText(item.Text, item.Size, item.Color, item.Font, item.Bordercolor, item.Bordersize, false, item.Animation, item.Duration, false, item.Cleanbg);
+                        var item = _animationQueue.Dequeue();
+                        if(!string.IsNullOrEmpty(item.Path))
+                           {
+                                LogIt($"⏱️ ⏳AnimationTimer: animation done, I will play {item.Path} next");
+                           }
+                        else if(!string.IsNullOrEmpty(item.Text))
+                           {
+                                LogIt($"⏱️ ⏳AnimationTimer: animation done, I will show {item.Text} next");
+                           }
+                        if (_animationQueue.Count > 0 )
+                        {
+                            LogIt($"⏱️ ⏳Animation queue has now {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => !string.IsNullOrEmpty(i.Text) ? i.Text : i.Path).Where(text => !string.IsNullOrEmpty(text)))}");
+                        }
+                        else
+                        {
+                            LogIt($"⏱️ ⏳Animation queue is now empty");
+                        }
+                        
+                        if(!string.IsNullOrEmpty(item.Path))
+                        {
+                            DisplayPicture(item.Path, item.Duration, item.Animation, false, item.Cleanbg);
+                        }
+                        else if(!string.IsNullOrEmpty(item.Text))
+                        {
+                            DisplayText(item.Text, item.Size, item.Color, item.Font, item.Bordercolor, item.Bordersize, false, item.Animation, item.Duration, false, item.Cleanbg);
+                        }
                     }
                 }
             }
@@ -704,14 +719,24 @@ private static List<Actor> GetAllActors(object parent)
                         if (duration >= 0)
                         {
                             LogIt($"⏳AnimationTimer: Duration is great than 0, calling animation timer for {path}");
-                             animationTimer = new Timer((state) =>
+        
+                            Timer animationTimer = new Timer((state) =>
+                            {
+                                lock (_sceneLock)
                                 {
-                                    lock (sceneLock) 
-                                    {
-                                        AnimationTimer(state);
-                                    }
-                                    animationTimer.Dispose(); // Dispose del timer
-                                }, null, (int)(duration * 1000), Timeout.Infinite);
+                                    AnimationTimer(state);
+                                }
+                                lock (_animationTimers)
+                                {
+                                    _animationTimers.Remove((Timer)state);
+                                }
+                                ((Timer)state).Dispose();
+                            }, null, (int)(duration * 1000), Timeout.Infinite);
+        
+                            lock (_animationTimers)
+                            {
+                                _animationTimers.Add(animationTimer);
+                            }
                         }
                     };
                                             
