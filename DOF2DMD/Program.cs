@@ -270,9 +270,6 @@ private static List<Actor> GetAllActors(object parent)
         /// </summary>
         private static void AnimationTimer(object state)
         {
-            lock (_sceneLock)
-            {
-
                 LogIt("⏱️ ⏳: Starting...");
                 LogIt($"⏱️ ⏳: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
                 
@@ -331,7 +328,6 @@ private static List<Actor> GetAllActors(object parent)
                     // Create new timer with 1 second delay
                     _scoreDelayTimer = new Timer(DelayedScoreDisplay, null, 1000, Timeout.Infinite);
                 }
-            }
         }
 
         private static void DelayedScoreDisplay(object state)
@@ -705,7 +701,6 @@ private static List<Actor> GetAllActors(object parent)
                         }
                         
                         // Arm timer once animation is done playing
-                        Timer animationTimer = null;
                         if (duration >= 0)
                         {
                             LogIt($"⏳AnimationTimer: Duration is great than 0, calling animation timer for {path}");
