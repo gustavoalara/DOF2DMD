@@ -435,7 +435,7 @@ private static List<Actor> GetAllActors(object parent)
             gCredits = credits;
             _scoreDelayTimer?.Dispose();
             // If no ongoing animation or we can display score over it
-            if (_ == null || sCleanbg == false || _currentDuration == -1)
+            if (_animationTimer == null || sCleanbg == false || _currentDuration == -1)
             {
                 LogIt($"DisplayScore for player {player}: {score}");
                 DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], "", "", sCleanbg);
@@ -616,7 +616,7 @@ private static List<Actor> GetAllActors(object parent)
 
                     // If this picture needs to be queued AND there is an animation/text running BUT current animation/text is not meant to be infinite, 
                     // then add this picture and its parameters to the animation queue. The animation timer will take care of it
-                    if (toQueue && _ != null && _currentDuration > 0)
+                    if (toQueue && _animationTimer != null && _currentDuration > 0)
                     {
                         lock (_animationQueueLock)
                         {
@@ -894,7 +894,7 @@ private static List<Actor> GetAllActors(object parent)
 
                     // If this text needs to be queued AND there is an animation/text running BUT current animation/text is not meant to be infinite, 
                     // then add this text and its parameters to the animation queue. The animation timer will take care of it
-                    if (toQueue && _ != null && _currentDuration > 0)
+                    if (toQueue && _animationTimer != null && _currentDuration > 0)
                     {
                         lock (_animationQueueLock)
                         {
@@ -924,7 +924,7 @@ private static List<Actor> GetAllActors(object parent)
                         if (duration > 0)
                         {
                             _animationTimer?.Dispose();
-                            _animationTimer = new Timer(animationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                            _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
                         }
                         _currentDuration = duration;
                         // Create background scene based on animation type
