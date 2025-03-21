@@ -270,7 +270,7 @@ private static List<Actor> GetAllActors(object parent)
         /// Callback method once animation is finished.
         /// Displays the player's score
         /// </summary>
-        private static void (object state)
+        private static void AnimationTimer(object state)
         {
             lock (_sceneLock)
             {
@@ -287,8 +287,8 @@ private static List<Actor> GetAllActors(object parent)
                 }
                 LogIt("⏱️ ⏳: Starting...");
                 LogIt($"⏱️ ⏳: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
-                _.Dispose();
-                _ = null;
+                _AnimationTimer.Dispose();
+                _AnimationTimer = null;
                 // Verify if current scene is over
                 if (_currentScene != null && _currentScene.Time >= _currentScene.Pause)
                 {
@@ -306,11 +306,11 @@ private static List<Actor> GetAllActors(object parent)
                         var item = _animationQueue.Dequeue();
                         if(!string.IsNullOrEmpty(item.Path))
                            {
-                                LogIt($"⏱️ ⏳: animation done, I will play {item.Path} next");
+                                LogIt($"⏱️ ⏳AnimationTimer: animation done, I will play {item.Path} next");
                            }
                         else if(!string.IsNullOrEmpty(item.Text))
                            {
-                                LogIt($"⏱️ ⏳: animation done, I will show {item.Text} next");
+                                LogIt($"⏱️ ⏳AnimationTimer: animation done, I will show {item.Text} next");
                            }
                         if (_animationQueue.Count > 0 )
                         {
@@ -333,7 +333,7 @@ private static List<Actor> GetAllActors(object parent)
                 }
                 else if (AppSettings.ScoreDmd != 0)
                 {
-                    LogIt("⏱️ : previous animation is done, no more animation queued, starting 1s delay before score");
+                    LogIt("⏱️ AnimationTimer: previous animation is done, no more animation queued, starting 1s delay before score");
     
                     // Dispose existing delay timer if any
                     _scoreDelayTimer?.Dispose();
@@ -728,7 +728,7 @@ private static List<Actor> GetAllActors(object parent)
                                 }
                                 lock (_animationTimers)
                                 {
-                                    _s.Remove((Timer)state);
+                                    _animationTimers.Remove((Timer)state);
                                 }
                                 ((Timer)state).Dispose();
                             }, null, (int)(duration * 1000), Timeout.Infinite);
@@ -921,8 +921,8 @@ private static List<Actor> GetAllActors(object parent)
     
                         if (duration > 0)
                         {
-                            _?.Dispose();
-                            _ = new Timer(, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                            _animationTimer?.Dispose();
+                            _animationTimer = new Timer(, null, (int)duration * 1000 + 1000, Timeout.Infinite);
                         }
                         _currentDuration = duration;
                         // Create background scene based on animation type
