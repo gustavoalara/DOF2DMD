@@ -91,6 +91,7 @@ namespace DOF2DMD
         private static readonly object _animationQueueLock = new object();
         private static readonly object _textQueueLock = new object();
         private static Sequence _SequenceQueue;
+        private static List<AnimationTimerInfo> _animationTimers = new List<AnimationTimerInfo>();
 
 
         public static ScoreBoard _scoreBoard;
@@ -245,24 +246,39 @@ namespace DOF2DMD
             );
         }
 
-private static List<Actor> GetAllActors(object parent)
-{
-    List<Actor> actors = new List<Actor>();
-
-    if (parent is Group group)
-    {
-        foreach (Actor child in group.Children)
+        /// <summary>
+        /// Extract the list of actors from a scene
+        /// </summary>
+        private static List<Actor> GetAllActors(object parent)
         {
-            actors.AddRange(GetAllActors(child)); // Recursive call
-        }
-    }
-    else if (parent is Actor actor)
-    {
-        actors.Add(actor);
-    }
+            List<Actor> actors = new List<Actor>();
 
-    return actors;
-}
+            if (parent is Group group)
+            {
+                foreach (Actor child in group.Children)
+                {
+                    actors.AddRange(GetAllActors(child)); // Recursive call
+                }
+            }
+            else if (parent is Actor actor)
+            {
+                actors.Add(actor);
+            }
+
+            return actors;
+        }
+
+        private class AnimationTimerInfo
+        {
+            public Timer Timer { get; set; }
+            public BackgroundScene Scene { get; set; }
+
+            public AnimationTimerInfo(Timer timer, BackgroundScene scene)
+            {
+                Timer = timer;
+                Scene = scene;
+            }
+        }
 
         /// <summary>
         /// Callback method once animation is finished.
@@ -270,64 +286,72 @@ private static List<Actor> GetAllActors(object parent)
         /// </summary>
         private static void AnimationTimer(object state)
         {
-                LogIt("⏱️ ⏳: Starting...");
-                LogIt($"⏱️ ⏳: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
-                
-                _animationTimer.Dispose();
-                _animationTimer = null;
-                
-                // Verify if current scene is over
-                if (_currentScene != null && _currentScene.Time >= _currentScene.Pause)
+            LogIt("⏱️ ⏳AnimationTimer: Starting...");
+            LogIt($"⏱️ ⏳AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
+            // Verificar y eliminar todas las escenas expiradas
+            List<AnimationTimerInfo> expiredTimers;
+            lock (_animationTimers)
+            {
+                expiredTimers = _animationTimers.Where(info => info.Scene.Time >= info.Scene.Pause).ToList();
+                foreach (var info in expiredTimers)
                 {
-                    LogIt($"⏱️ : Removing expired scene {_currentScene?.Name}");
-                    gDmdDevice.Stage.RemoveActor(_currentScene); // Delete scene from scenario
-                    _currentScene = null; // Clean reference
-                    
-                }
-                LogIt($": Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
-                // Check if there are more animations in the queue
-                if (_animationQueue.Count > 0)
-                {
-                    lock (_animationQueueLock)
+                    var scene = info.Scene;
+                    if (scene != null)
                     {
-                        var item = _animationQueue.Dequeue();
-                        if(!string.IsNullOrEmpty(item.Path))
-                           {
-                                LogIt($"⏱️ ⏳AnimationTimer: animation done, I will play {item.Path} next");
-                           }
-                        else if(!string.IsNullOrEmpty(item.Text))
-                           {
-                                LogIt($"⏱️ ⏳AnimationTimer: animation done, I will show {item.Text} next");
-                           }
-                        if (_animationQueue.Count > 0 )
+                        LogIt($"⏱️ AnimationTimer: Removing expired scene {scene.Name}");
+                        gDmdDevice.Stage.RemoveActor(scene);
+                        if (_currentScene == scene)
                         {
-                            LogIt($"⏱️ ⏳Animation queue has now {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => !string.IsNullOrEmpty(i.Text) ? i.Text : i.Path).Where(text => !string.IsNullOrEmpty(text)))}");
-                        }
-                        else
-                        {
-                            LogIt($"⏱️ ⏳Animation queue is now empty");
-                        }
-                        
-                        if(!string.IsNullOrEmpty(item.Path))
-                        {
-                            DisplayPicture(item.Path, item.Duration, item.Animation, false, item.Cleanbg);
-                        }
-                        else if(!string.IsNullOrEmpty(item.Text))
-                        {
-                            DisplayText(item.Text, item.Size, item.Color, item.Font, item.Bordercolor, item.Bordersize, false, item.Animation, item.Duration, false, item.Cleanbg);
+                            _currentScene = null;
                         }
                     }
+                    info.Timer.Dispose();
+                    _animationTimers.Remove(info);
                 }
-                else if (AppSettings.ScoreDmd != 0)
+            }
+            LogIt($"⏱️ AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
+            // Verificar si hay más animaciones en la cola
+            if (_animationQueue.Count > 0 && !_animationTimers.Any())
+            {
+                LogIt($"⏱️ ⏳Animation queue has now {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => !string.IsNullOrEmpty(i.Text) ? i.Text : i.Path).Where(text => !string.IsNullOrEmpty(text)))}");
+
+                QueueItem item;
+                lock (_animationQueueLock)
                 {
-                    LogIt("⏱️ AnimationTimer: previous animation is done, no more animation queued, starting 1s delay before score");
-    
-                    // Dispose existing delay timer if any
-                    _scoreDelayTimer?.Dispose();
-    
-                    // Create new timer with 1 second delay
-                    _scoreDelayTimer = new Timer(DelayedScoreDisplay, null, 1000, Timeout.Infinite);
+                    item = _animationQueue.Dequeue();
                 }
+                if (!string.IsNullOrEmpty(item.Path))
+                {
+                    LogIt($"⏱️ ⏳AnimationTimer: animation done, I will play {item.Path} next");
+                }
+                else if (!string.IsNullOrEmpty(item.Text))
+                {
+                    LogIt($"⏱️ ⏳AnimationTimer: animation done, I will show {item.Text} next");
+                }
+
+                if (!string.IsNullOrEmpty(item.Path))
+                {
+                    DisplayPicture(item.Path, item.Duration, item.Animation, false, item.Cleanbg);
+                }
+                else if (!string.IsNullOrEmpty(item.Text))
+                {
+                    DisplayText(item.Text, item.Size, item.Color, item.Font, item.Bordercolor, item.Bordersize, false, item.Animation, item.Duration, false, item.Cleanbg);
+                }
+            }
+            else if (AppSettings.ScoreDmd != 0)
+            {
+                LogIt("⏱️ AnimationTimer: previous animation is done, no more animation queued, starting 1s delay before score");
+
+                // Dispose existing delay timer if any
+                _scoreDelayTimer?.Dispose();
+
+                // Create new timer with 1 second delay
+                _scoreDelayTimer = new Timer(DelayedScoreDisplay, null, 1000, Timeout.Infinite);
+            }
+            else
+            {
+                LogIt($"⏱️ ⏳Animation queue is now empty");
+            }
         }
 
         private static void DelayedScoreDisplay(object state)
@@ -517,18 +541,19 @@ private static List<Actor> GetAllActors(object parent)
         /// Displays an image or video file on the DMD device using native FlexDMD capabilities.
         /// </summary>
         public static bool DisplayPicture(string path, float duration, string animation, bool toQueue, bool cleanbg)
-        { 
+        {
             try
             {
+                _currentDuration = duration;
                 if (string.IsNullOrEmpty(path))
                     return false;
-        
+
                 // Validate file path and existence
                 string localPath;
                 localPath = HttpUtility.UrlDecode(
                     Path.IsPathRooted(path)
                         ? Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path))
-                        : Path.Combine(AppSettings.artworkPath, 
+                        : Path.Combine(AppSettings.artworkPath,
                             Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path)))
                 );
 
@@ -538,7 +563,7 @@ private static List<Actor> GetAllActors(object parent)
                 {
                     // List of possible extensions for a static marquee
                     extensions = new List<string> { ".png", ".jpg", ".bmp", ".jpeg" };
-                    LogIt($"⚙️ Setting marquee to: {path}");
+                    LogIt($"Setting marquee to: {path}");
                 }
                 else
                 {
@@ -552,7 +577,7 @@ private static List<Actor> GetAllActors(object parent)
                     var matchedFile = FindBestFuzzyMatch(localPath, extensions);
                     if (!string.IsNullOrEmpty(matchedFile))
                     {
-                        LogIt($"⚠️Exact match not found for {localPath}, but found {matchedFile} using fuzzy matching");
+                        LogIt($"Exact match not found for {localPath}, but found {matchedFile} using fuzzy matching");
                         localPath = Path.Combine(
                             Path.GetDirectoryName(matchedFile),
                             Path.GetFileNameWithoutExtension(matchedFile)
@@ -565,7 +590,7 @@ private static List<Actor> GetAllActors(object parent)
                         return false;
                     }
                 }
-        
+
                 string fullPath = localPath + foundExtension;
                 if (localPath.Contains("&"))
                 {
@@ -578,38 +603,38 @@ private static List<Actor> GetAllActors(object parent)
                 {
                     return false;
                 }
-        
+                // If this picture needs to be queued AND there is an animation/text running BUT current animation/text is not meant to be infinite, 
+                // then add this picture and its parameters to the animation queue. The animation timer will take care of it
+                
+                if (toQueue &&  _currentDuration > 0)
+                {
+                    lock (_animationQueueLock)
+                    {
+                        LogIt($"⏳Queuing {path} for display after current animation");
+                        _animationQueue.Enqueue(new QueueItem(path, duration, animation, cleanbg));
+                        LogIt($"⏳Queue has {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => i.Path))}");
+                        return true;
+                    }
+                }
                 // Now that we've validated everything, process the display asynchronously
                 _ = Task.Run(() =>
                 {
-                    LogIt($"🎞️DisplayPicture: Starting visualization of {path}, Duration: {duration}, cleanbg: {cleanbg}, toQueue: {toQueue}"); 
                     // Check if gDmdDevice is initialized
                     int retries = 10;
                     while (gDmdDevice == null && retries > 0)
                     {
                         Thread.Sleep(1000);
-                        LogIt($"❗ Retrying DMD device initialization {retries} retries left");
+                        LogIt($"Retrying DMD device initialization {retries} retries left");
                         retries--;
                     }
 
                     if (gDmdDevice == null)
                     {
-                        LogIt("🛑DMD device initialization failed 10 retries");
+                        LogIt("DMD device initialization failed 10 retries");
                         return;
                     }
 
-                    // If this picture needs to be queued AND there is an animation/text running BUT current animation/text is not meant to be infinite, 
-                    // then add this picture and its parameters to the animation queue. The animation timer will take care of it
-                    if (toQueue && _animationTimer != null && _currentDuration > 0)
-                    {
-                        lock (_animationQueueLock)
-                        {
-                            LogIt($"⏳Queuing {path} for display after current animation");
-                            _animationQueue.Enqueue(new QueueItem(path, duration, animation, cleanbg));
-                            LogIt($"⏳Queue has {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => i.Path))}");
-                            return;
-                        }
-                    }
+                    
 
                     System.Action displayAction = () =>
                     {
@@ -623,7 +648,7 @@ private static List<Actor> GetAllActors(object parent)
                                 gDmdDevice.Graphics.Clear(Color.Black);
                                 _loopTimer?.Dispose();
                             }
-                            
+
                             _scoreDelayTimer?.Dispose();
                             _scoreDelayTimer = null;
                             _scoreBoard.Visible = false;
@@ -654,7 +679,7 @@ private static List<Actor> GetAllActors(object parent)
                             mediaActor.SetPosition(new Random().Next(-1, 2) * 32, 0);
 
                         }
-                        
+
                         // Handle looping for GIFs/Videos when duration is -1
                         bool videoLoop = false;
                         if (isVideo && duration < 0)
@@ -662,7 +687,7 @@ private static List<Actor> GetAllActors(object parent)
                             LogIt($"🔄 Setting video loop to true for {fullPath}");
                             videoLoop = true;
                         }
-                        _currentDuration = duration;
+                       
                         // If duration is negative - show immediately and clear the animation queue
                         if (duration < 0)
                         {
@@ -679,49 +704,50 @@ private static List<Actor> GetAllActors(object parent)
                         duration = (isVideo && duration == 0) ? ((AnimatedActor)mediaActor).Length :
                                    (isImage && duration == 0) ? 9999 : duration;
 
-                       
+
                         //Check the video Loop
                         duration = (videoLoop) ? -1 : duration;
 
                         BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration, path);
-                        _currentScene = bg; // Store reference to current scene
+                        _currentScene = bg; // Almacenar la referencia a la escena actual
                         _SequenceQueue.Visible = true;
 
                         // Add scene to the queue or directly to the stage
                         if (cleanbg)
                         {
-                            LogIt($"🎞️DisplayPicture: cleanbg is true, enqueuing {path} in _SequenceQueue"); 
                             _SequenceQueue.Enqueue(bg);
                             _loopTimer?.Dispose();
                         }
                         else
                         {
-                            LogIt($"🎞️DisplayPicture: cleanbg is false, adding {path} to Stage");
                             gDmdDevice.Stage.AddActor(bg);
                         }
-                        
+
                         // Arm timer once animation is done playing
                         if (duration >= 0)
                         {
-                            LogIt($"⏳AnimationTimer: Duration is great than 0, calling animation timer for {path}");
-                            _animationTimer?.Dispose();
-                            _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                            LogIt($"⏳AnimationTimer: Duration is greater than 0, calling animation timer for {path}");
+                            var animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                            lock (_animationTimers)
+                            {
+                                _animationTimers.Add(new AnimationTimerInfo(animationTimer, bg));
+                            }
                         }
                     };
-                                            
+
                     LogIt($"📷Rendering {(isVideo ? $"video (duration: {duration * 1000}ms)" : "image")}: {fullPath}");
-                    
-                     // Execute initial action
+
+                    // Execute initial action
                     gDmdDevice.Post(displayAction);
-                    
+
                 });
-                
+
                 // Return true immediately after validation, while display processing continues in background
                 return true;
             }
             catch (Exception ex)
             {
-                LogIt($"⚠️Error occurred while fetching the image. {ex.Message}");
+                LogIt($"Error occurred while fetching the image. {ex.Message}");
                 return false;
             }
         }
@@ -733,21 +759,21 @@ private static List<Actor> GetAllActors(object parent)
             return animation switch
             {
                 "none" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, name),
-                "fade" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.FadeIn, duration, AnimationType.FadeOut, ""),
-                "left2right" => new BackgroundScene(gDmdDevice,mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffRight, ""),
-                "scrollright" => new ScrollingRightPictureScene(gDmdDevice,mediaActor, AnimationType.None, duration, AnimationType.None, ""),
-                "left2left" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffLeft, ""),
-                "right2left" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, ""),
-                "scrollleft" => new ScrollingLeftPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, ""),
-                "right2right" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffRight, ""),
-                "top2bottom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffDown, ""),
-                "scrolldown" => new ScrollingDownPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffDown, ""),
-                "top2top" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffUp, ""),
-                "bottom2top" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffUp, ""),
-                "scrollup" => new ScrollingUpPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffUp, ""),
-                "bottom2bottom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffDown, ""),
-                "zoom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ZoomIn, duration, AnimationType.ZoomOut, ""),
-                _ => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, "")
+                "fade" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.FadeIn, duration, AnimationType.FadeOut, name),
+                "left2right" => new BackgroundScene(gDmdDevice,mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffRight, name),
+                "scrollright" => new ScrollingRightPictureScene(gDmdDevice,mediaActor, AnimationType.None, duration, AnimationType.None, name),
+                "left2left" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffLeft, name),
+                "right2left" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, name),
+                "scrollleft" => new ScrollingLeftPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, name),
+                "right2right" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffRight, name),
+                "top2bottom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffDown, name),
+                "scrolldown" => new ScrollingDownPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffDown, name),
+                "top2top" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffUp, name),
+                "bottom2top" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffUp, name),
+                "scrollup" => new ScrollingUpPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffUp, name),
+                "bottom2bottom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffDown, name),
+                "zoom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ZoomIn, duration, AnimationType.ZoomOut, name),
+                _ => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, name)
             };
         }
         /// <summary>
@@ -824,6 +850,8 @@ private static List<Actor> GetAllActors(object parent)
                 // Convert size to numeric value based on device dimensions
                 size = GetFontSize(size, gDmdDevice.Width, gDmdDevice.Height);
 
+                _currentDuration = duration;
+
                 // Check if the font exists
                 string localFontPath = $"resources/{font}_{size}";
                 List<string> extensions = new List<string> { ".fnt", ".png" };
@@ -861,7 +889,8 @@ private static List<Actor> GetAllActors(object parent)
 
                     // If this text needs to be queued AND there is an animation/text running BUT current animation/text is not meant to be infinite, 
                     // then add this text and its parameters to the animation queue. The animation timer will take care of it
-                    if (toQueue && _animationTimer != null && _currentDuration > 0)
+                    
+                    if (toQueue && _currentDuration > 0)
                     {
                         lock (_animationQueueLock)
                         {
@@ -893,7 +922,7 @@ private static List<Actor> GetAllActors(object parent)
                             _animationTimer?.Dispose();
                             _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
                         }
-                        _currentDuration = duration;
+                        
                         // Create background scene based on animation type
                         BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), currentActor, text, myFont, duration);
                         _currentScene = bg;
