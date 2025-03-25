@@ -90,6 +90,10 @@ namespace DOF2DMD
         private static readonly object _scoreQueueLock = new object();
         private static readonly object _animationQueueLock = new object();
         private static readonly object _textQueueLock = new object();
+        private static readonly object _scoreBoardLock = new object();
+        private static readonly object _scoreDelayTimerLock = new object();
+        private static readonly object _currentSceneLock = new object();
+        private static readonly object _animationTimersLock = new object();
         private static Sequence _SequenceQueue;
         private static List<AnimationTimerInfo> _animationTimers = new List<AnimationTimerInfo>();
 
@@ -287,70 +291,84 @@ namespace DOF2DMD
         private static void AnimationTimer(object state)
         {
             LogIt("⏱️ ⏳AnimationTimer: Starting...");
-            LogIt($"⏱️ ⏳AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
             // Verificar y eliminar todas las escenas expiradas
             List<AnimationTimerInfo> expiredTimers;
-            lock (_animationTimers)
+            lock (_animationTimersLock)
             {
+                LogIt($"⏱️ ⏳AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
+
                 expiredTimers = _animationTimers.Where(info => info.Scene.Time >= info.Scene.Pause).ToList();
                 foreach (var info in expiredTimers)
                 {
                     var scene = info.Scene;
                     if (scene != null)
                     {
-                        LogIt($"⏱️ AnimationTimer: Removing expired scene {scene.Name}");
-                        gDmdDevice.Stage.RemoveActor(scene);
-                        if (_currentScene == scene)
+                        gDmdDevice.Post(() =>
                         {
-                            _currentScene = null;
-                        }
+                            LogIt($"⏱️ AnimationTimer: Removing expired scene {scene.Name}");
+                            gDmdDevice.Stage.RemoveActor(scene);
+                            lock (_currentSceneLock)
+                            {
+                                if (_currentScene == scene)
+                                {
+                                    _currentScene = null;
+                                }
+                            }
+                        });
                     }
                     info.Timer.Dispose();
                     _animationTimers.Remove(info);
                 }
-            }
-            LogIt($"⏱️ AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
-            // Verificar si hay más animaciones en la cola
-            if (_animationQueue.Count > 0 && !_animationTimers.Any())
-            {
-                LogIt($"⏱️ ⏳Animation queue has now {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => !string.IsNullOrEmpty(i.Text) ? i.Text : i.Path).Where(text => !string.IsNullOrEmpty(text)))}");
+                LogIt($"⏱️ AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
 
-                QueueItem item;
-                lock (_animationQueueLock)
+                // Verificar si hay más animaciones en la cola
+                if (_animationQueue.Count > 0 && !_animationTimers.Any())
                 {
-                    item = _animationQueue.Dequeue();
-                }
-                if (!string.IsNullOrEmpty(item.Path))
-                {
-                    LogIt($"⏱️ ⏳AnimationTimer: animation done, I will play {item.Path} next");
-                }
-                else if (!string.IsNullOrEmpty(item.Text))
-                {
-                    LogIt($"⏱️ ⏳AnimationTimer: animation done, I will show {item.Text} next");
-                }
+                    QueueItem item;
+                    lock (_animationQueueLock)
+                    {
+                        var localQueue = _animationQueue.ToList(); // Crear una copia local
 
-                if (!string.IsNullOrEmpty(item.Path))
-                {
-                    DisplayPicture(item.Path, item.Duration, item.Animation, false, item.Cleanbg);
-                }
-                else if (!string.IsNullOrEmpty(item.Text))
-                {
-                    DisplayText(item.Text, item.Size, item.Color, item.Font, item.Bordercolor, item.Bordersize, false, item.Animation, item.Duration, false, item.Cleanbg);
-                }
-            }
-            else if (AppSettings.ScoreDmd != 0)
-            {
-                LogIt("⏱️ AnimationTimer: previous animation is done, no more animation queued, starting 1s delay before score");
+                        LogIt($"⏱️ ⏳Animation queue has now {localQueue.Count} items: {string.Join(", ", localQueue.Select(i => !string.IsNullOrEmpty(i.Text) ? i.Text : i.Path).Where(text => !string.IsNullOrEmpty(text)))}");
 
-                // Dispose existing delay timer if any
-                _scoreDelayTimer?.Dispose();
 
-                // Create new timer with 1 second delay
-                _scoreDelayTimer = new Timer(DelayedScoreDisplay, null, 1000, Timeout.Infinite);
-            }
-            else
-            {
-                LogIt($"⏱️ ⏳Animation queue is now empty");
+                        item = _animationQueue.Dequeue();
+                    }
+                    if (!string.IsNullOrEmpty(item.Path))
+                    {
+                        LogIt($"⏱️ ⏳AnimationTimer: animation done, I will play {item.Path} next");
+                    }
+                    else if (!string.IsNullOrEmpty(item.Text))
+                    {
+                        LogIt($"⏱️ ⏳AnimationTimer: animation done, I will show {item.Text} next");
+                    }
+
+                    if (!string.IsNullOrEmpty(item.Path))
+                    {
+                        DisplayPicture(item.Path, item.Duration, item.Animation, false, item.Cleanbg);
+                    }
+                    else if (!string.IsNullOrEmpty(item.Text))
+                    {
+                        DisplayText(item.Text, item.Size, item.Color, item.Font, item.Bordercolor, item.Bordersize, false, item.Animation, item.Duration, false, item.Cleanbg);
+                    }
+                }
+                
+                else if (AppSettings.ScoreDmd != 0)
+                {
+                    LogIt("⏱️ AnimationTimer: previous animation is done, no more animation queued, starting 1s delay before score");
+
+                    // Dispose existing delay timer if any
+                    lock (_scoreDelayTimerLock)
+                    {
+                        _scoreDelayTimer?.Dispose();
+                        // Create new timer with 1 second delay
+                        _scoreDelayTimer = new Timer(DelayedScoreDisplay, null, 1000, Timeout.Infinite);
+                    }
+                }
+                else
+                {
+                    LogIt($"⏱️ ⏳Animation queue is now empty");
+                }
             }
         }
 
@@ -358,14 +376,16 @@ namespace DOF2DMD
         {
             _scoreDelayTimer?.Dispose();
             _scoreDelayTimer = null;
-
             // Check if we still want to display the score (no new animations queued)
             if (_animationQueue.Count == 0 && AppSettings.ScoreDmd != 0)
             {
-                LogIt("⏱️ DelayedScoreDisplay: delay complete, displaying score");
+                LogIt($"⏱️ DelayedScoreDisplay: delay complete, displaying score");
                 if (gScore[gActivePlayer] > 0)
                 {
-                    DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], false, gCredits);
+                    lock (_scoreBoardLock)
+                    {
+                        DisplayScore(gNbPlayers, gActivePlayer, gScore[gActivePlayer], false, gCredits);
+                    }
                 }
             }
         }
@@ -446,8 +466,12 @@ namespace DOF2DMD
             if (_animationTimer == null || sCleanbg == false || _currentDuration == -1)
             {
                 LogIt($"DisplayScore for player {player}: {score}");
-                DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], "", "", sCleanbg);
-            } 
+                lock (_scoreBoardLock)
+                {
+                    DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], "", "", sCleanbg);
+
+                }
+            }
             return true;
 
         }
@@ -458,23 +482,26 @@ namespace DOF2DMD
         {
             try
             {
-                
+
                 _SequenceQueue.Visible = !cleanbg;
 
                 //gDmdDevice.LockRenderThread();
-                gDmdDevice.Post(() =>
-                {
+                lock (_scoreBoardLock)
+                { 
+                    gDmdDevice.Post(() =>
+                    {
 
-                    _scoreBoard.SetNPlayers(cPlayers);
-                    _scoreBoard.SetHighlightedPlayer(highlightedPlayer);
-                    _scoreBoard.SetScore(score1, score2, score3, score4);
-                    _scoreBoard._lowerLeft.Text = lowerLeft;
-                    _scoreBoard._lowerRight.Text = lowerRight;
+                        _scoreBoard.SetNPlayers(cPlayers);
+                        _scoreBoard.SetHighlightedPlayer(highlightedPlayer);
+                        _scoreBoard.SetScore(score1, score2, score3, score4);
+                        _scoreBoard._lowerLeft.Text = lowerLeft;
+                        _scoreBoard._lowerRight.Text = lowerRight;
 
-                    _scoreBoard.Visible = true;
+                        _scoreBoard.Visible = true;
 
 
-                });
+                    });
+                }
                 //gDmdDevice.UnlockRenderThread();
                 if (AppSettings.ScoreDmd != 0)
                 {
