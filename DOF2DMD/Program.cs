@@ -319,39 +319,39 @@ namespace DOF2DMD
                     info.Timer.Dispose();
                     _animationTimers.Remove(info);
                 }
-                LogIt($"⏱️ AnimationTimer: Current Actors on the scene after checking expired: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
+                LogIt($"⏱️ AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
+
                 LogIt($"⏳AnimationTimer: Current Actors on the queue: {_animationQueue.Count}, animation timers: {_animationTimers.Count}");
                 
-                // Verify if there are more animations on the queue
-                if (_animationQueue.Count > 0 && _animationTimers.Count == 0)
+                // Verify if there are more animations on the queue						   
+                if (_animationQueue.Count > 0 && !_animationTimers.Any())
                 {
                     QueueItem item;
                     lock (_animationQueueLock)
                     {
-                        var localQueue = _animationQueue.ToList(); // Crear una copia local
+                        var localQueue = _animationQueue.ToList(); 
 
                         LogIt($"⏱️ ⏳Animation queue has now {localQueue.Count} items: {string.Join(", ", localQueue.Select(i => !string.IsNullOrEmpty(i.Text) ? i.Text : i.Path).Where(text => !string.IsNullOrEmpty(text)))}");
 
 
                         item = _animationQueue.Dequeue();
+                    }
+                    if (!string.IsNullOrEmpty(item.Path))
+                    {
+                        LogIt($"⏱️ ⏳AnimationTimer: animation done, I will play {item.Path} next");
+                    }
+                    else if (!string.IsNullOrEmpty(item.Text))
+                    {
+                        LogIt($"⏱️ ⏳AnimationTimer: animation done, I will show {item.Text} next");
+                    }
 
-                        if (!string.IsNullOrEmpty(item.Path))
-                        {
-                            LogIt($"⏱️ ⏳AnimationTimer: animation done, I will play {item.Path} next");
-                        }
-                        else if (!string.IsNullOrEmpty(item.Text))
-                        {
-                            LogIt($"⏱️ ⏳AnimationTimer: animation done, I will show {item.Text} next");
-                        }
-    
-                        if (!string.IsNullOrEmpty(item.Path))
-                        {
-                            DisplayPicture(item.Path, item.Duration, item.Animation, false, item.Cleanbg);
-                        }
-                        else if (!string.IsNullOrEmpty(item.Text))
-                        {
-                            DisplayText(item.Text, item.Size, item.Color, item.Font, item.Bordercolor, item.Bordersize, false, item.Animation, item.Duration, false, item.Cleanbg);
-                        }
+                    if (!string.IsNullOrEmpty(item.Path))
+                    {
+                        DisplayPicture(item.Path, item.Duration, item.Animation, false, item.Cleanbg);
+                    }
+                    else if (!string.IsNullOrEmpty(item.Text))
+                    {
+                        DisplayText(item.Text, item.Size, item.Color, item.Font, item.Bordercolor, item.Bordersize, false, item.Animation, item.Duration, false, item.Cleanbg);
                     }
                 }
                 
@@ -632,9 +632,19 @@ namespace DOF2DMD
                 {
                     return false;
                 }
-
+                // If this picture needs to be queued AND there is an animation/text running BUT current animation/text is not meant to be infinite, 
+                // then add this picture and its parameters to the animation queue. The animation timer will take care of it
                 
-
+                if (toQueue &&  _currentDuration > 0)
+                {
+                    lock (_animationQueueLock)
+                    {
+                        LogIt($"⏳Queuing {path} for display after current animation");
+                        _animationQueue.Enqueue(new QueueItem(path, duration, animation, cleanbg));
+                        LogIt($"⏳Queue has {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => i.Path))}");
+                        return true;
+                    }
+                }
                 // Now that we've validated everything, process the display asynchronously
                 _ = Task.Run(() =>
                 {
@@ -652,18 +662,8 @@ namespace DOF2DMD
                         LogIt("DMD device initialization failed 10 retries");
                         return;
                     }
-                    // If this picture needs to be queued AND there is an animation/text running BUT current animation/text is not meant to be infinite, 
-                    // then add this picture and its parameters to the animation queue. The animation timer will take care of it
-                    if (toQueue && _animationTimer != null && _currentDuration > 0)
-                    {
-                        lock (_animationQueueLock)
-                        {
-                            LogIt($"⏳Queuing {path} for display after current animation");
-                            _animationQueue.Enqueue(new QueueItem(path, duration, animation, cleanbg));
-                            LogIt($"⏳Queue has {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => i.Path))}");
-                            return;
-                        }
-                    }
+
+                    
 
                     System.Action displayAction = () =>
                     {
@@ -829,7 +829,7 @@ namespace DOF2DMD
                 return false;
             }
     
-            // Create the process to run Hi2Txt
+			// Verifies if files exist before run
             ProcessStartInfo psi = new ProcessStartInfo
             {
                 FileName = hi2txtExe,
