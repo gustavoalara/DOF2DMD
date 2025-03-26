@@ -403,6 +403,7 @@ namespace DOF2DMD
                 try
                 {
                     DisplayPicture(GetGameMarquee(), -1, "none", false, true);
+
                 }
                 finally
                 {
@@ -635,7 +636,7 @@ namespace DOF2DMD
                 // If this picture needs to be queued AND there is an animation/text running BUT current animation/text is not meant to be infinite, 
                 // then add this picture and its parameters to the animation queue. The animation timer will take care of it
                 
-                if (toQueue &&  _currentDuration > 0)
+                if (toQueue && (_currentDuration > 0 || _currentDuration == -1))
                 {
                     lock (_animationQueueLock)
                     {
@@ -670,12 +671,17 @@ namespace DOF2DMD
                         gDmdDevice.Clear = true;
                         try
                         {
-                            // Clear existing resources
-                            if (cleanbg)
+                            // Clear existing resources if cleanbg=true and not queued
+                            if (cleanbg && !toQueue)
                             {
                                 _SequenceQueue.RemoveAllScenes();
                                 gDmdDevice.Graphics.Clear(Color.Black);
                                 _loopTimer?.Dispose();
+                                lock (_animationQueueLock)
+                                {
+                                    _animationQueue.Clear();
+                                    LogIt($"⏳Animation queue and all scenes cleared because cleanbg=true (immediate display)");
+                                }
                             }
 
                             _scoreDelayTimer?.Dispose();
@@ -718,15 +724,15 @@ namespace DOF2DMD
                         }
                        
                         // If duration is negative - show immediately and clear the animation queue
-                        if (duration < 0)
-                        {
-                            lock (_animationQueueLock)
-                            {
-                                _animationQueue.Clear();
-                                LogIt($"⏳Animation queue cleared as duration was negative (immediate display, infinite duration)");
-                            }
+                        //if (duration < 0)
+                        //{
+                        //    lock (_animationQueueLock)
+                        //    {
+                        //        _animationQueue.Clear();
+                        //        LogIt($"⏳Animation queue cleared as duration was negative (immediate display, infinite duration)");
+                        //    }
                             //duration = -1;
-                        }
+                        //}
 
                         // Adjust duration for videos and images if not explicitly set
                         // For image, set duration to infinite (9999s)
