@@ -320,8 +320,9 @@ namespace DOF2DMD
                     _animationTimers.Remove(info);
                 }
                 LogIt($"⏱️ AnimationTimer: Current Actors on the scene after checking expired: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
-
-                // Verificar si hay más animaciones en la cola
+                LogIt($"⏳AnimationTimer: Current Actors on the queue: {_animationQueue.Count}, animation timers: {_animationTimers.Any()}");
+                
+                // Verify if there are more animations on the queue
                 if (_animationQueue.Count > 0 && !_animationTimers.Any())
                 {
                     QueueItem item;
