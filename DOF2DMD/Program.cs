@@ -632,19 +632,9 @@ namespace DOF2DMD
                 {
                     return false;
                 }
-                // If this picture needs to be queued AND there is an animation/text running BUT current animation/text is not meant to be infinite, 
-                // then add this picture and its parameters to the animation queue. The animation timer will take care of it
+
                 
-                if (toQueue &&  _currentDuration > 0)
-                {
-                    lock (_animationQueueLock)
-                    {
-                        LogIt($"⏳Queuing {path} for display after current animation");
-                        _animationQueue.Enqueue(new QueueItem(path, duration, animation, cleanbg));
-                        LogIt($"⏳Queue has {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => i.Path))}");
-                        return true;
-                    }
-                }
+
                 // Now that we've validated everything, process the display asynchronously
                 _ = Task.Run(() =>
                 {
@@ -662,8 +652,18 @@ namespace DOF2DMD
                         LogIt("DMD device initialization failed 10 retries");
                         return;
                     }
-
-                    
+                    // If this picture needs to be queued AND there is an animation/text running BUT current animation/text is not meant to be infinite, 
+                    // then add this picture and its parameters to the animation queue. The animation timer will take care of it
+                    if (toQueue && _animationTimer != null && _currentDuration > 0)
+                    {
+                        lock (_animationQueueLock)
+                        {
+                            LogIt($"⏳Queuing {path} for display after current animation");
+                            _animationQueue.Enqueue(new QueueItem(path, duration, animation, cleanbg));
+                            LogIt($"⏳Queue has {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => i.Path))}");
+                            return;
+                        }
+                    }
 
                     System.Action displayAction = () =>
                     {
