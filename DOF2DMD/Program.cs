@@ -319,7 +319,7 @@ namespace DOF2DMD
                     info.Timer.Dispose();
                     _animationTimers.Remove(info);
                 }
-                LogIt($"⏱️ AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
+                LogIt($"⏱️ AnimationTimer: Current Actors on the scene after checking expired: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
 
                 // Verificar si hay más animaciones en la cola
                 if (_animationQueue.Count > 0 && !_animationTimers.Any())
@@ -333,23 +333,24 @@ namespace DOF2DMD
 
 
                         item = _animationQueue.Dequeue();
-                    }
-                    if (!string.IsNullOrEmpty(item.Path))
-                    {
-                        LogIt($"⏱️ ⏳AnimationTimer: animation done, I will play {item.Path} next");
-                    }
-                    else if (!string.IsNullOrEmpty(item.Text))
-                    {
-                        LogIt($"⏱️ ⏳AnimationTimer: animation done, I will show {item.Text} next");
-                    }
 
-                    if (!string.IsNullOrEmpty(item.Path))
-                    {
-                        DisplayPicture(item.Path, item.Duration, item.Animation, false, item.Cleanbg);
-                    }
-                    else if (!string.IsNullOrEmpty(item.Text))
-                    {
-                        DisplayText(item.Text, item.Size, item.Color, item.Font, item.Bordercolor, item.Bordersize, false, item.Animation, item.Duration, false, item.Cleanbg);
+                        if (!string.IsNullOrEmpty(item.Path))
+                        {
+                            LogIt($"⏱️ ⏳AnimationTimer: animation done, I will play {item.Path} next");
+                        }
+                        else if (!string.IsNullOrEmpty(item.Text))
+                        {
+                            LogIt($"⏱️ ⏳AnimationTimer: animation done, I will show {item.Text} next");
+                        }
+    
+                        if (!string.IsNullOrEmpty(item.Path))
+                        {
+                            DisplayPicture(item.Path, item.Duration, item.Animation, false, item.Cleanbg);
+                        }
+                        else if (!string.IsNullOrEmpty(item.Text))
+                        {
+                            DisplayText(item.Text, item.Size, item.Color, item.Font, item.Bordercolor, item.Bordersize, false, item.Animation, item.Duration, false, item.Cleanbg);
+                        }
                     }
                 }
                 
@@ -809,12 +810,12 @@ namespace DOF2DMD
         /// </summary>
         public static bool DisplayHighscores(string game, string size, string color, string font, string bordercolor, int bordersize, bool cleanbg, string animation, float duration, bool loop, bool toQueue)
         {
-            // Construir la ruta completa del ejecutable y el archivo de highscore
+            // Make the path for the highscore exe and the highscore file
             string hi2txtExe = System.IO.Path.Combine(AppSettings.hi2txt_path, "Hi2Txt.exe");
             string hiscoreFile = System.IO.Path.Combine(AppSettings.mame_path, "hiscore", $"{game}.hi");
             LogIt($"Hi2txt set to {hi2txtExe}");
             LogIt($"Game highscore file set to {hiscoreFile}");
-            // Verificar si los archivos existen antes de ejecutar
+            // Verifies if files exist before run
             if (!System.IO.File.Exists(hi2txtExe))
             {
                 LogIt($"Error: No Hi2Txt.exe found in the path specified.");
@@ -827,7 +828,7 @@ namespace DOF2DMD
                 return false;
             }
     
-            // Crear el proceso para ejecutar Hi2Txt
+            // Create the process to run Hi2Txt
             ProcessStartInfo psi = new ProcessStartInfo
             {
                 FileName = hi2txtExe,
@@ -847,11 +848,11 @@ namespace DOF2DMD
                         return false;
                     }
     
-                    // Leer y procesar la salida
+                    // Read and process the output
                     string output = process.StandardOutput.ReadToEnd();
                     process.WaitForExit();
     
-                    // Reemplazar '|' por ' - ' en toda la salida antes de unir las líneas
+                    // Replace '|' by ' - ' in every output before join the lines
                     string formattedOutput = string.Join("|", output.Replace("|", " - ").Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)) + "|";
                     
                     DisplayText(formattedOutput, size, color, font, bordercolor, bordersize, cleanbg, animation, duration,loop, toQueue);
