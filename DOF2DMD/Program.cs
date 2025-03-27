@@ -324,7 +324,7 @@ namespace DOF2DMD
                 LogIt($"⏳AnimationTimer: Current Actors on the queue: {_animationQueue.Count}, animation timers: {_animationTimers.Count}");
                 
                 // Verify if there are more animations on the queue						   
-                if (_animationQueue.Count > 0 && !_animationTimers.Any())
+                if (_animationQueue.Count > 0 && _animationTimers.Count == 0)
                 {
                     QueueItem item;
                     lock (_animationQueueLock)
