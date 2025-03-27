@@ -307,13 +307,13 @@ namespace DOF2DMD
                         {
                             LogIt($"⏱️ AnimationTimer: Removing expired actor from the scene {scene.Name}");
                             gDmdDevice.Stage.RemoveActor(scene);
-                            lock (_currentSceneLock)
-                            {
+                            //lock (_currentSceneLock)
+                            //{
                                 if (_currentScene == scene)
                                 {
                                     _currentScene = null;
                                 }
-                            }
+                            //}
                         });
                     }
                     info.Timer.Dispose();
@@ -355,7 +355,7 @@ namespace DOF2DMD
                     }
                 }
                 
-                else if (AppSettings.ScoreDmd != 0)
+                else if (AppSettings.ScoreDmd != 0 && _animationQueue.Count == 0 && _animationTimers.Count == 0 )
                 {
                     LogIt("⏱️ AnimationTimer: previous animation is done, no more animation queued, starting 1s delay before score");
 
