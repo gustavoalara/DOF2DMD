@@ -295,8 +295,6 @@ namespace DOF2DMD
             List<AnimationTimerInfo> expiredTimers;
             lock (_animationTimersLock)
             {
-                LogIt($"⏱️ ⏳AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
-
                 expiredTimers = _animationTimers.Where(info => info.Scene.Time >= info.Scene.Pause).ToList();
                 foreach (var info in expiredTimers)
                 {
@@ -319,20 +317,19 @@ namespace DOF2DMD
                     info.Timer.Dispose();
                     _animationTimers.Remove(info);
                 }
-                LogIt($"⏱️ AnimationTimer: Current Actors on the scene: {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
-
-                LogIt($"⏳AnimationTimer: Current Actors on the queue: {_animationQueue.Count}, animation timers: {_animationTimers.Count}");
                 
+
+                var localAnimationTimer = _animationTimers.ToList();
+                var localQueue = _animationQueue.ToList();
+
+               
                 // Verify if there are more animations on the queue						   
-                if (_animationQueue.Count > 0 && _animationTimers.Count == 0)
+                if (localQueue.Count > 0 && localAnimationTimer.Count == 0)
                 {
                     QueueItem item;
                    // lock (_animationQueueLock)
                    // {
-                        var localQueue = _animationQueue.ToList(); 
-
-                        LogIt($"⏱️ ⏳Animation queue has now {localQueue.Count} items: {string.Join(", ", localQueue.Select(i => !string.IsNullOrEmpty(i.Text) ? i.Text : i.Path).Where(text => !string.IsNullOrEmpty(text)))}");
-
+                        
 
                         item = _animationQueue.Dequeue();
                     //}
@@ -355,7 +352,7 @@ namespace DOF2DMD
                     }
                 }
                 
-                else if (AppSettings.ScoreDmd != 0 && _animationQueue.Count == 0 && _animationTimers.Count == 0 )
+                else if (AppSettings.ScoreDmd != 0  )
                 {
                     LogIt("⏱️ AnimationTimer: previous animation is done, no more animation queued, starting 1s delay before score");
 
@@ -367,10 +364,14 @@ namespace DOF2DMD
                         _scoreDelayTimer = new Timer(DelayedScoreDisplay, null, 1000, Timeout.Infinite);
                     }
                 }
-                else
+                else if (_animationQueue.Count == 0 && _animationTimers.Count == 0)
                 {
                     LogIt($"⏱️ ⏳Animation queue is now empty");
                 }
+
+                LogIt($"⏱️ AnimationTimer: Current Actors on the scene ({gDmdDevice.Stage.ChildCount - 1}): {string.Join(", ", GetAllActors(gDmdDevice.Stage).Select(actor => actor.Name))}");
+                LogIt($"⏳ AnimationTimer: Current Actors on the animation Timer ({localAnimationTimer.Count}): {string.Join(", ", localAnimationTimer.Select(timerInfo => timerInfo.Scene.Name))}");
+                LogIt($"⏳ AnimationTimer: Current Actors enqueued ({localQueue.Count}): {string.Join(", ", localQueue.Select(i => !string.IsNullOrEmpty(i.Text) ? i.Text : i.Path).Where(text => !string.IsNullOrEmpty(text)))}");
             }
         }
 
@@ -381,7 +382,7 @@ namespace DOF2DMD
             // Check if we still want to display the score (no new animations queued)
             if (_animationQueue.Count == 0 && AppSettings.ScoreDmd != 0)
             {
-                LogIt($"⏱️ DelayedScoreDisplay: delay complete, displaying score");
+                LogIt($"⏱️ DelayedScoreDisplay: delay complete, displaying Player {gActivePlayer} score: {gScore[gActivePlayer]}");
                 if (gScore[gActivePlayer] > 0)
                 {
                     lock (_scoreBoardLock)
@@ -398,8 +399,6 @@ namespace DOF2DMD
         private static void ScoreTimer(object state)
         {
             LogIt("⏱️ ScoreTimer - restore marquee");
-		 var localQueue = _animationQueue.ToList(); 
-	    LogIt($"⏱️ ScoreTimer - Animation queue has now {localQueue.Count} items: {string.Join(", ", localQueue.Select(i => !string.IsNullOrEmpty(i.Text) ? i.Text : i.Path).Where(text => !string.IsNullOrEmpty(text)))}");
             lock (_scoreQueueLock)
             {
                 try
@@ -462,22 +461,21 @@ namespace DOF2DMD
         }
         public static Boolean DisplayScore(int cPlayers, int player, int score, bool sCleanbg, int credits)
         {
-            gScore[player] = score;
-            gActivePlayer = player;
-            gNbPlayers = cPlayers;
-            gCredits = credits;
-            _scoreDelayTimer?.Dispose();
-            // If no ongoing animation or we can display score over it
-            if (_animationTimer == null || sCleanbg == false || _currentDuration == -1)
+            lock (_scoreBoardLock)
             {
-                LogIt($"DisplayScore for player {player}: {score}");
-                lock (_scoreBoardLock)
+                gScore[player] = score;
+                gActivePlayer = player;
+                gNbPlayers = cPlayers;
+                gCredits = credits;
+                _scoreDelayTimer?.Dispose();
+                // If no ongoing animation or we can display score over it
+                if (_animationTimer == null || sCleanbg == false || _currentDuration == -1)
                 {
+                    LogIt($"DisplayScore for player {player}: {score}");
                     DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], "", "", sCleanbg);
-
                 }
+                return true;
             }
-            return true;
 
         }
         /// <summary>
@@ -594,14 +592,14 @@ namespace DOF2DMD
                 if (path == GetGameMarquee())
                 {
                     // List of possible extensions for a static marquee
-                    extensions = new List<string> { ".png", ".jpg", ".bmp", ".jpeg" };
+                //    extensions = new List<string> { ".png", ".jpg", ".bmp", ".jpeg" };  ///Lo comento, no tiene sentido, las marquees pueden ser animadas
                     LogIt($"Setting marquee to: {path}");
                 }
-                else
-                {
+                //else
+                //{
                     // List of possible extensions for other
                     extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp", ".apng", ".jpeg" };
-                }
+                //}
 
                 // Find the file to display
                 if (!FileExistsWithExtensions(localPath, extensions, out string foundExtension))
@@ -1386,22 +1384,22 @@ namespace DOF2DMD
                                         {
                                             pictureduration = -1.0f;
                                         }
-                                        if (!picturepath.Contains("mameoutput"))
+                                        if (picturepath.Contains("marquee"))  // creo que tiene más sentido si la carpeta que se compruebe contiene marquee en vez de sólo excluir mameouput. Pensando en múltiples usos para DOF2DMD
                                         {
                                             // This is certainly a game marquee, provided during new game
-                                            // If path corresponds to an existing file, set game marquee
+                                            // If path corresponds to an existing file, set game marquee /// Comento todo esto ya que pueden haber marquees animadas
                                             //List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp" };
-                                            List<string> extensions = new List<string> { ".png", ".jpg", ".bmp" };
-                                            if (FileExistsWithExtensions(HttpUtility.UrlDecode(AppSettings.artworkPath + "/" + picturepath), extensions, out string foundExtension))
-                                            {
+                                            //List<string> extensions = new List<string> { ".png", ".jpg", ".bmp" };
+                                            //if (FileExistsWithExtensions(HttpUtility.UrlDecode(AppSettings.artworkPath + "/" + picturepath), extensions, out string foundExtension))
+                                            //{
                                                 SetGameMarquee(picturepath);
                                                 LogIt($"Setting Game Marquee to: {picturepath}");
-                                            }
-                                            // Reset scores for all players
-                                            for (int i = 1; i <= 4; i++)
-                                                gScore[i] = 0;
+                                            //}
+                                        //Reset scores for all players as diferent marquee is a diferent game and we need to reset the scores
+                                        for (int i = 1; i <= 4; i++)
+                                            gScore[i] = 0;
                                         }
-                                        bool pcleanbg;
+                                    bool pcleanbg;
                                         if (!bool.TryParse(query.Get("cleanbg"), out pcleanbg))
                                         {
                                             pcleanbg = true; // default value if the conversion fails
