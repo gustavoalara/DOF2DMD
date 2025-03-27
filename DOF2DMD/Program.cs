@@ -305,7 +305,7 @@ namespace DOF2DMD
                     {
                         gDmdDevice.Post(() =>
                         {
-                            LogIt($"⏱️ AnimationTimer: Removing expired scene {scene.Name}");
+                            LogIt($"⏱️ AnimationTimer: Removing expired actor from the scene {scene.Name}");
                             gDmdDevice.Stage.RemoveActor(scene);
                             lock (_currentSceneLock)
                             {
