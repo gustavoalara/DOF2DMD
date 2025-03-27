@@ -327,15 +327,15 @@ namespace DOF2DMD
                 if (_animationQueue.Count > 0 && _animationTimers.Count == 0)
                 {
                     QueueItem item;
-                    lock (_animationQueueLock)
-                    {
+                   // lock (_animationQueueLock)
+                   // {
                         var localQueue = _animationQueue.ToList(); 
 
                         LogIt($"⏱️ ⏳Animation queue has now {localQueue.Count} items: {string.Join(", ", localQueue.Select(i => !string.IsNullOrEmpty(i.Text) ? i.Text : i.Path).Where(text => !string.IsNullOrEmpty(text)))}");
 
 
                         item = _animationQueue.Dequeue();
-                    }
+                    //}
                     if (!string.IsNullOrEmpty(item.Path))
                     {
                         LogIt($"⏱️ ⏳AnimationTimer: animation done, I will play {item.Path} next");
