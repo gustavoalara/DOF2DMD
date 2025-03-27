@@ -398,6 +398,7 @@ namespace DOF2DMD
         private static void ScoreTimer(object state)
         {
             LogIt("⏱️ ScoreTimer - restore marquee");
+	    LogIt($"⏱️ ScoreTimer - Animation queue has now {localQueue.Count} items: {string.Join(", ", localQueue.Select(i => !string.IsNullOrEmpty(i.Text) ? i.Text : i.Path).Where(text => !string.IsNullOrEmpty(text)))}");
             lock (_scoreQueueLock)
             {
                 try
