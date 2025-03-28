@@ -251,6 +251,52 @@ namespace DOF2DMD
         }
 
         /// <summary>
+        /// This class provides access to application settings stored in an INI file.
+        /// The settings are loaded from the 'settings.ini' file in the current directory.
+        /// If a setting is not found in the file, default values are provided.
+        /// </summary>
+        public class AppSettings
+        {
+            private static IConfiguration _configuration;
+
+            static AppSettings()
+            {
+                var builder = new ConfigurationBuilder();
+                builder.SetBasePath(Directory.GetCurrentDirectory());
+                builder.AddIniFile("settings.ini", optional: true, reloadOnChange: true);
+
+                _configuration = builder.Build();
+            }
+
+            public static string UrlPrefix => _configuration["url_prefix"] ?? "http://127.0.0.1:8080";
+            public static int NumberOfDmd => Int32.Parse(_configuration["number_of_dmd"] ?? "1");
+            public static int AnimationDmd => Int32.Parse(_configuration["animation_dmd"] ?? "1");
+            public static int ScoreDmd => Int32.Parse(_configuration["score_dmd"] ?? "1");
+            public static int marqueeDmd => Int32.Parse(_configuration["marquee_dmd"] ?? "1");
+            public static int displayScoreDuration => Int32.Parse(_configuration["display_score_duration_s"] ?? "5");
+            public static bool Debug => Boolean.Parse(_configuration["debug"] ?? "false");
+            public static string artworkPath => _configuration["artwork_path"] ?? "artwork";
+            public static ushort dmdWidth => ushort.Parse(_configuration["dmd_width"] ?? "128");
+            public static ushort dmdHeight => ushort.Parse(_configuration["dmd_height"] ?? "32");
+            public static string StartPicture => _configuration["start_picture"] ?? "DOF2DMD";
+            public static bool hi2txt_enabled => Boolean.Parse(_configuration["hi2txt_enabled"] ?? "false");
+            public static string hi2txt_path => _configuration["hi2txt_path"] ?? "c:\\hi2txt";
+            public static string mame_path => _configuration["mame_path"] ?? "c:\\mame";
+        }
+
+        /// <summary>
+        /// Save debug message in file
+        /// </summary>
+        public static void LogIt(string message)
+        {
+            // If debug is enabled
+            if (AppSettings.Debug)
+            {
+                Trace.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [Thread {Thread.CurrentThread.ManagedThreadId}] {message}");
+            }
+        }
+
+	/// <summary>
         /// Extract the list of actors from a scene
         /// </summary>
         private static List<Actor> GetAllActors(object parent)
@@ -303,15 +349,12 @@ namespace DOF2DMD
                     {
                         gDmdDevice.Post(() =>
                         {
-                            LogIt($"⏱️ AnimationTimer: Removing expired actor from the scene {scene.Name}");
-                            gDmdDevice.Stage.RemoveActor(scene);
-                            //lock (_currentSceneLock)
-                            //{
-                                if (_currentScene == scene)
-                                {
-                                    _currentScene = null;
-                                }
-                            //}
+				LogIt($"⏱️ AnimationTimer: Removing expired actor from the scene {scene.Name}");
+				gDmdDevice.Stage.RemoveActor(scene);
+				if (_currentScene == scene)
+				{
+				    _currentScene = null;
+				}
                         });
                     }
                     info.Timer.Dispose();
@@ -327,12 +370,8 @@ namespace DOF2DMD
                 if (localQueue.Count > 0 && localAnimationTimer.Count == 0)
                 {
                     QueueItem item;
-                   // lock (_animationQueueLock)
-                   // {
-                        
-
-                        item = _animationQueue.Dequeue();
-                    //}
+                    item = _animationQueue.Dequeue();
+			
                     if (!string.IsNullOrEmpty(item.Path))
                     {
                         LogIt($"⏱️ ⏳AnimationTimer: animation done, I will play {item.Path} next");
@@ -392,6 +431,7 @@ namespace DOF2DMD
                 }
             }
         }
+	    
         /// <summary>
         /// This method is a callback for a timer that displays the current score.
         /// It then calls the DisplayPicture method to show the game marquee picture.
@@ -413,52 +453,7 @@ namespace DOF2DMD
                 }
             }
         }
-
-        /// <summary>
-        /// This class provides access to application settings stored in an INI file.
-        /// The settings are loaded from the 'settings.ini' file in the current directory.
-        /// If a setting is not found in the file, default values are provided.
-        /// </summary>
-        public class AppSettings
-        {
-            private static IConfiguration _configuration;
-
-            static AppSettings()
-            {
-                var builder = new ConfigurationBuilder();
-                builder.SetBasePath(Directory.GetCurrentDirectory());
-                builder.AddIniFile("settings.ini", optional: true, reloadOnChange: true);
-
-                _configuration = builder.Build();
-            }
-
-            public static string UrlPrefix => _configuration["url_prefix"] ?? "http://127.0.0.1:8080";
-            public static int NumberOfDmd => Int32.Parse(_configuration["number_of_dmd"] ?? "1");
-            public static int AnimationDmd => Int32.Parse(_configuration["animation_dmd"] ?? "1");
-            public static int ScoreDmd => Int32.Parse(_configuration["score_dmd"] ?? "1");
-            public static int marqueeDmd => Int32.Parse(_configuration["marquee_dmd"] ?? "1");
-            public static int displayScoreDuration => Int32.Parse(_configuration["display_score_duration_s"] ?? "5");
-            public static bool Debug => Boolean.Parse(_configuration["debug"] ?? "false");
-            public static string artworkPath => _configuration["artwork_path"] ?? "artwork";
-            public static ushort dmdWidth => ushort.Parse(_configuration["dmd_width"] ?? "128");
-            public static ushort dmdHeight => ushort.Parse(_configuration["dmd_height"] ?? "32");
-            public static string StartPicture => _configuration["start_picture"] ?? "DOF2DMD";
-            public static bool hi2txt_enabled => Boolean.Parse(_configuration["hi2txt_enabled"] ?? "false");
-            public static string hi2txt_path => _configuration["hi2txt_path"] ?? "c:\\hi2txt";
-            public static string mame_path => _configuration["mame_path"] ?? "c:\\mame";
-        }
-
-        /// <summary>
-        /// Save debug message in file
-        /// </summary>
-        public static void LogIt(string message)
-        {
-            // If debug is enabled
-            if (AppSettings.Debug)
-            {
-                Trace.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [Thread {Thread.CurrentThread.ManagedThreadId}] {message}");
-            }
-        }
+	    
         public static Boolean DisplayScore(int cPlayers, int player, int score, bool sCleanbg, int credits)
         {
             lock (_scoreBoardLock)
@@ -478,6 +473,7 @@ namespace DOF2DMD
             }
 
         }
+	    
         /// <summary>
         /// Displays the Score Board on the DMD device using native FlexDMD capabilities.
         /// </summary>
@@ -664,8 +660,6 @@ namespace DOF2DMD
                         return;
                     }
 
-                    
-
                     System.Action displayAction = () =>
                     {
                         gDmdDevice.Clear = true;
@@ -723,17 +717,6 @@ namespace DOF2DMD
                             videoLoop = true;
                         }
                        
-                        // If duration is negative - show immediately and clear the animation queue
-                        //if (duration < 0)
-                        //{
-                        //    lock (_animationQueueLock)
-                        //    {
-                        //        _animationQueue.Clear();
-                        //        LogIt($"⏳Animation queue cleared as duration was negative (immediate display, infinite duration)");
-                        //    }
-                            //duration = -1;
-                        //}
-
                         // Adjust duration for videos and images if not explicitly set
                         // For image, set duration to infinite (9999s)
                         duration = (isVideo && duration == 0) ? ((AnimatedActor)mediaActor).Length :
@@ -786,8 +769,6 @@ namespace DOF2DMD
                 return false;
             }
         }
-        
-
 
         private static BackgroundScene CreateBackgroundScene(FlexDMD.FlexDMD gDmdDevice, Actor mediaActor, string animation, float duration, string name = "")
         {
