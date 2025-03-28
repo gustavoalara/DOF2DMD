@@ -566,7 +566,7 @@ namespace DOF2DMD
         /// <summary>
         /// Displays an image or video file on the DMD device using native FlexDMD capabilities.
         /// </summary>
-        public static bool DisplayPicture(string path, float duration, string animation, bool toQueue, bool cleanbg)
+        public static bool DisplayPicture(string path, float duration, string animation, bool toQueue, bool cleanbg, float wait = 0)
         {
             try
             {
@@ -1356,6 +1356,7 @@ namespace DOF2DMD
                                         string picturepath = query.Get("path");
                                         string pFixed = query.Get("fixed") ?? "false";
                                         float pictureduration = float.TryParse(query.Get("duration"), out float result) ? result : 0.0f;
+					float picturewait = float.TryParse(query.Get("wait"), out float wresult) ? wresult : 0.0f;
                                         string pictureanimation = query.Get("animation") ?? "none";
                                         bool queue;
                                         // Check if 'queue' exists in the query parameters
@@ -1385,7 +1386,7 @@ namespace DOF2DMD
                                         {
                                             pcleanbg = true; // default value if the conversion fails
                                         }
-                                        if (!DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg))
+                                        if (!DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg, picturewait))
                                         {
                                             sReturn = $"Picture or video not found: {picturepath}";
                                         }
