@@ -733,17 +733,43 @@ namespace DOF2DMD
                         // Add scene to the queue or directly to the stage
                         if (cleanbg)
                         {
+                            if (wait > 0)
+                            {
+                                var action1 = new FlexDMD.ShowAction(bg, false);
+                                var action2 = new FlexDMD.WaitAction(wait);
+                                var action3 = new FlexDMD.ShowAction(bg, true);
+                                var sequenceAction = new FlexDMD.SequenceAction();
+                                sequenceAction.Add(action1);
+                                sequenceAction.Add(action2);
+                                sequenceAction.Add(action3);
+                                    
+                                bg.AddAction(sequenceAction);
+                            }
+
                             _SequenceQueue.Enqueue(bg);
                             _loopTimer?.Dispose();
                         }
                         else
                         {
+                            if (wait > 0)
+                            {
+                                var action1 = new FlexDMD.ShowAction(bg, false);
+                                var action2 = new FlexDMD.WaitAction(wait);
+                                var action3 = new FlexDMD.ShowAction(bg, true);
+                                var sequenceAction = new FlexDMD.SequenceAction();
+                                sequenceAction.Add(action1);
+                                sequenceAction.Add(action2);
+                                sequenceAction.Add(action3);
+                                
+                                bg.AddAction(sequenceAction);
+                            }
                             gDmdDevice.Stage.AddActor(bg);
                         }
 
                         // Arm timer once animation is done playing
                         if (duration >= 0)
                         {
+                            duration = duration + wait;
                             LogIt($"⏳AnimationTimer: Duration is greater than 0, calling animation timer for {path}");
                             var animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
                             lock (_animationTimers)
@@ -756,7 +782,9 @@ namespace DOF2DMD
                     LogIt($"📷Rendering {(isVideo ? $"video (duration: {duration * 1000}ms)" : "image")}: {fullPath}");
 
                     // Execute initial action
+                    gDmdDevice.LockRenderThread();
                     gDmdDevice.Post(displayAction);
+                    gDmdDevice.UnlockRenderThread();
 
                 });
 
@@ -1982,6 +2010,64 @@ namespace DOF2DMD
             }
         }
     }
+    class ZoomScene : Scene
+{
+    private Actor _image;
+    private float _targetZoomFactor;
+    private float _zoomSpeed;
+    private float _initialImageWidth;
+    private float _initialImageHeight;
+
+    public ZoomScene(IFlexDMD flex, Actor image, float targetZoomFactor, float zoomSpeed, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, animateIn, pauseS, animateOut, id)
+    {
+        _image = image;
+        _targetZoomFactor = targetZoomFactor;
+        _zoomSpeed = zoomSpeed;
+        AddActor(_image);
+    }
+
+    protected override void Begin()
+    {
+        base.Begin();
+
+        // Guardar el tamaño inicial de la imagen
+        _initialImageWidth = _image.Width;
+        _initialImageHeight = _image.Height;
+
+        // Si el tamaño inicial es 0, establecerlo a 1 para evitar divisiones por cero.
+        if (_initialImageWidth == 0) _initialImageWidth = 1;
+        if (_initialImageHeight == 0) _initialImageHeight = 1;
+
+        // Establecer el tamaño inicial de la imagen a 1x1 píxel
+        _image.SetSize(1, 1);
+
+        // Centrar la imagen inicialmente
+        _image.X = (Width - _image.Width) / 2;
+        _image.Y = (Height - _image.Height) / 2;
+    }
+
+    public override void Update(float delta)
+    {
+        base.Update(delta);
+
+        // Calcular el nuevo tamaño de la imagen
+        float newWidth = _image.Width + _zoomSpeed * delta;
+        float newHeight = _image.Height + _zoomSpeed * delta;
+
+        // Limitar el tamaño de la imagen al factor de zoom deseado
+        float targetWidth = Width * _targetZoomFactor;
+        float targetHeight = Height * _targetZoomFactor;
+
+        if (newWidth > targetWidth) newWidth = targetWidth;
+        if (newHeight > targetHeight) newHeight = targetHeight;
+
+        _image.SetSize(newWidth, newHeight);
+
+        // Centrar la imagen en la escena
+        _image.X = (Width - _image.Width) / 2;
+        _image.Y = (Height - _image.Height) / 2;
+    }
+}
     class ScoreBoard : Group
     {
         private readonly FlexDMD.Label[] _scores = new FlexDMD.Label[4];
