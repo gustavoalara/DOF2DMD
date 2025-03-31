@@ -566,7 +566,7 @@ namespace DOF2DMD
         /// <summary>
         /// Displays an image or video file on the DMD device using native FlexDMD capabilities.
         /// </summary>
-        public static bool DisplayPicture(string path, float duration, string animation, bool toQueue, bool cleanbg, float wait = 0)
+        public static bool DisplayPicture(string path, float duration, string animation, bool toQueue, bool cleanbg, float wait = 0, int xpos = 0, int ypos = 0, string scale = "fit", string align = "center", float playSpeed = 1.0f)    
         {
             try
             {
@@ -688,13 +688,58 @@ namespace DOF2DMD
                             // Continue execution as this is not critical
                         }
                         Actor mediaActor;
+                        var scalingMap = new Dictionary<string, Scaling>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            {"none", Scaling.None},
+                            {"fit", Scaling.Fit},
+                            {"stretch", Scaling.Stretch},
+                            {"fill", Scaling.Fill},
+                            {"fillx", Scaling.FillX},
+                            {"filly", Scaling.FillY},
+                            {"stretchx", Scaling.StretchX},
+                            {"stretchy", Scaling.StretchY}
+                        };
+
+                        Scaling scaleValue = scalingMap.TryGetValue(scale, out var scaling) 
+                            ? scaling 
+                            : Scaling.Fit; // ← Asignará Fit porque "invalid_value" no existe
+                        
+                        var alignmentMap = new Dictionary<string, Alignment>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            {"center", Alignment.Center},
+                            {"right", Alignment.Right},
+                            {"left", Alignment.Left},
+                            {"top", Alignment.Top},
+                            {"bottom", Alignment.Bottom},
+                            {"topright", Alignment.TopRight},
+                            {"topleft", Alignment.TopLeft},
+                            {"bottomright", Alignment.BottomRight},
+                            {"bottomleft", Alignment.BottomLeft}
+                        };
+
+                        Alignment alignmentValue = alignmentMap.TryGetValue(align, out var alignment) 
+                            ? alignment
+                            : Alignment.Center; // ← Asignará Fit porque "invalid_value" no existe
+
                         try
                         {
                             mediaActor = isVideo ?
                                 (Actor)gDmdDevice.NewVideo("Video: " + path, fullPath) :
                                 (Actor)gDmdDevice.NewImage("Image: " + path, fullPath);
 
-                            mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
+                            //mediaActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
+                            // Asignar Scaling después de castear al tipo correcto
+                            if (isVideo)
+                            {
+                                ((IVideoActor)mediaActor).Scaling = scaleValue;
+                                ((IVideoActor)mediaActor).Alignment = alignmentValue;
+                                ((IVideoActor)mediaActor).PlaySpeed = playSpeed;
+                            }
+                            else
+                            {
+                                ((IImageActor)mediaActor).Scaling = scaleValue;
+                                ((IImageActor)mediaActor).Alignment = alignmentValue;
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -707,6 +752,10 @@ namespace DOF2DMD
                         {
                             mediaActor.SetPosition(new Random().Next(-1, 2) * 32, 0);
 
+                        }
+                        else
+                        {
+                            mediaActor.SetPosition(xpos, ypos);
                         }
 
                         // Handle looping for GIFs/Videos when duration is -1
@@ -887,7 +936,7 @@ namespace DOF2DMD
         /// Displays text on the DMD device.
         /// %0A or | for line break
         /// </summary>
-        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, int bordersize, bool cleanbg, string animation, float duration, bool loop, bool toQueue)
+        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, int bordersize, bool cleanbg, string animation, float duration, bool loop, bool toQueue, float wait = 0, int xpos = 0, int ypos = 0, string align = "center")
         {
             try
             {
@@ -964,7 +1013,7 @@ namespace DOF2DMD
                         if (duration > 0)
                         {
                             _animationTimer?.Dispose();
-                            _animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
+                            _animationTimer = new Timer(AnimationTimer, null, (int)(duration + wait) * 1000 + 1000, Timeout.Infinite);
                         }
                         
                         // Create background scene based on animation type
@@ -975,11 +1024,36 @@ namespace DOF2DMD
                         // Add scene to the queue or directly to the stage
                         if (cleanbg)
                         {
+                            if (wait > 0)
+                            {
+                                var action1 = new FlexDMD.ShowAction(bg, false);
+                                var action2 = new FlexDMD.WaitAction(wait);
+                                var action3 = new FlexDMD.ShowAction(bg, true);
+                                var sequenceAction = new FlexDMD.SequenceAction();
+                                sequenceAction.Add(action1);
+                                sequenceAction.Add(action2);
+                                sequenceAction.Add(action3);
+                                    
+                                bg.AddAction(sequenceAction);
+                            }
+
                             _SequenceQueue.Enqueue(bg);
                             _loopTimer?.Dispose();
                         }
                         else
                         {
+                            if (wait > 0)
+                            {
+                                var action1 = new FlexDMD.ShowAction(bg, false);
+                                var action2 = new FlexDMD.WaitAction(wait);
+                                var action3 = new FlexDMD.ShowAction(bg, true);
+                                var sequenceAction = new FlexDMD.SequenceAction();
+                                sequenceAction.Add(action1);
+                                sequenceAction.Add(action2);
+                                sequenceAction.Add(action3);
+                                
+                                bg.AddAction(sequenceAction);
+                            }
                             gDmdDevice.Stage.AddActor(bg);
                         }
 
@@ -988,7 +1062,9 @@ namespace DOF2DMD
                      LogIt($"Rendering text: {text}");
                     
                     // Execute initial action
+                    gDmdDevice.LockRenderThread();
                     gDmdDevice.Post(displayAction);
+                    gDmdDevice.UnlockRenderThread();
     
                     // If loop is true, configure the timer
                     if (loop)
@@ -997,7 +1073,9 @@ namespace DOF2DMD
                         float waitDuration = duration * 0.85f; // 15% less than duration
                         _loopTimer = new Timer(_ =>
                         {
+                            gDmdDevice.LockRenderThread();
                             gDmdDevice.Post(displayAction);
+                            gDmdDevice.UnlockRenderThread();
                         }, null, (int)(waitDuration * 1000), (int)(waitDuration * 1000));
                     }
                
@@ -1384,8 +1462,13 @@ namespace DOF2DMD
                                         string picturepath = query.Get("path");
                                         string pFixed = query.Get("fixed") ?? "false";
                                         float pictureduration = float.TryParse(query.Get("duration"), out float result) ? result : 0.0f;
-					float picturewait = float.TryParse(query.Get("wait"), out float wresult) ? wresult : 0.0f;
+					                    float picturewait = float.TryParse(query.Get("wait"), out float wresult) ? wresult : 0.0f;
+                                        int pxpos = int.TryParse(query.Get("xpos"), out int pxresult) ? pxresult : 0;
+                                        int pypos = int.TryParse(query.Get("ypos"), out int pyresult) ? pyresult : 0;
                                         string pictureanimation = query.Get("animation") ?? "none";
+                                        string palign = query.Get("align") ?? "center";
+                                        string pscale = query.Get("scale") ?? "fit";
+                                        float pplayspeed = float.TryParse(query.Get("playspeed"), out float psresult) ? psresult : 1.0f;
                                         bool queue;
                                         // Check if 'queue' exists in the query parameters
                                         queue = dof2dmdUrl.Contains("&queue") || dof2dmdUrl.EndsWith("?queue");
@@ -1414,7 +1497,10 @@ namespace DOF2DMD
                                         {
                                             pcleanbg = true; // default value if the conversion fails
                                         }
-                                        if (!DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg, picturewait))
+                                        if (!DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg, picturewait,pxpos, pypos, pscale, palign, pplayspeed))
+                                        {
+                                            sReturn = $"Picture or video not found: {picturepath}";
+                                        }
                                         {
                                             sReturn = $"Picture or video not found: {picturepath}";
                                         }
