@@ -719,7 +719,7 @@ namespace DOF2DMD
 
                         Alignment alignmentValue = alignmentMap.TryGetValue(align, out var alignment) 
                             ? alignment
-                            : Alignment.Center; // ← Asignará Fit porque "invalid_value" no existe
+                            : Alignment.Center; // Default
 
                         try
                         {
@@ -936,7 +936,7 @@ namespace DOF2DMD
         /// Displays text on the DMD device.
         /// %0A or | for line break
         /// </summary>
-        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, int bordersize, bool cleanbg, string animation, float duration, bool loop, bool toQueue, float wait = 0, int xpos = 0, int ypos = 0, string align = "center")
+        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, int bordersize, bool cleanbg, string animation, float duration, bool loop, bool toQueue, float wait = 0)
         {
             try
             {
@@ -997,13 +997,13 @@ namespace DOF2DMD
                     {
                         // Create font and label actor
                         FlexDMD.Font myFont = gDmdDevice.NewFont(localFontPath, HexToColor(color), HexToColor(bordercolor), border);
-                        var labelActor = (Actor)gDmdDevice.NewLabel("MyLabel", myFont, text);
-    
+                            
                         gDmdDevice.Graphics.Clear(Color.Black);
                         _scoreDelayTimer?.Dispose();
                         _scoreBoard.Visible = false;
     
-                        var currentActor = new Actor();
+                        var labelActor = new Actor();
+
                         if (cleanbg)
                         {
                             _SequenceQueue.RemoveAllScenes();
@@ -1017,7 +1017,7 @@ namespace DOF2DMD
                         }
                         
                         // Create background scene based on animation type
-                        BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), currentActor, text, myFont, duration);
+                        BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), labelActor, text, myFont, duration + wait);
                         _currentScene = bg;
                         _SequenceQueue.Visible = true;
     
@@ -1127,11 +1127,11 @@ namespace DOF2DMD
         {
             return animation switch
             {
-                "scrolldown" => new ScrollingDownScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None),
-                "scrollup" => new ScrollingUpScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None),
-                "scrollright" => new ScrollingRightScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None),
-                "scrollleft" => new ScrollingLeftScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None),
-                _ => new NoAnimationScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None)
+                "scrolldown" => new ScrollingDownTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None),
+                "scrollup" => new ScrollingUpTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None),
+                "scrollright" => new ScrollingRightTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None),
+                "scrollleft" => new ScrollingLeftTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None),
+                _ => new NoAnimationTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None)
             };
         }
 
@@ -1513,6 +1513,7 @@ namespace DOF2DMD
                                         string bordercolor = query.Get("bordercolor") ?? "000000";
                                         int bordersize = int.TryParse(query.Get("bordersize"), out int bresult) ? bresult : 0;
                                         string animation = query.Get("animation") ?? "none";
+                                        float textwait = float.TryParse(query.Get("wait"), out float twresult) ? twresult : 0.0f;
                                         float textduration = float.TryParse(query.Get("duration"), out float tresult) ? tresult : 5.0f;
                                         LogIt($"Text is now set to: {text} with size {size}, color {color}, font {font}, border color {bordercolor}, border size {bordersize}, animation {animation} with a duration of {textduration} seconds");
                                         bool tqueue;
@@ -1529,7 +1530,7 @@ namespace DOF2DMD
                                         {
                                             loop = false; // default value if the conversion fails
                                         }
-                                        if (!DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop, tqueue))
+                                        if (!DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop, tqueue, textwait))
                                         {
                                             sReturn = "Error when displaying text";
                                         }
@@ -1669,12 +1670,12 @@ namespace DOF2DMD
             _background?.SetSize(Width, Height);
         }
     }
-    class NoAnimationScene : BackgroundScene
+    class NoAnimationTextScene : BackgroundScene
     {
         private readonly Group _container;
         private readonly float _length;
 
-        public NoAnimationScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        public NoAnimationTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _container = new Group(FlexDMD);
 
@@ -1683,7 +1684,10 @@ namespace DOF2DMD
             string[] lines = text.Split(new char[] { '\n', '|' });
 
             _length = pauseS;
-
+            
+            _container.Width = Width;
+            _container.Height = Height;
+            _container.SetPosition(0,0);
             foreach (string line in lines)
             {
                 //var txt = line.Trim();
@@ -1692,16 +1696,15 @@ namespace DOF2DMD
                 var label = new FlexDMD.Label(flex, font, txt);
                 label.Y = y;
                 y += label.Height;
-                label.Alignment = Alignment.Left;
+                label.Alignment = Alignment.Center;
                 _container.AddActor(label);
             }
-            _container.Height = y;
         }
 
         protected override void Begin()
         {
             base.Begin();
-            _container.Y = (Height - _container.Height) / 2;
+            //_container.Y = (Height - _container.Height) / 2;
             
             var action1 = new FlexDMD.WaitAction(_length);
             var action2 = new FlexDMD.ShowAction(_container, false);
@@ -1725,7 +1728,11 @@ namespace DOF2DMD
                 _container.Width = Width;
                 foreach (Actor line in _container.Children)
                 {
-                    line.X = (Width - line.Width) / 2;
+                    var y = 0f;
+                    //line.X = (Width - line.Width) / 2;
+                    line.Width = Width;
+                    line.Y = y + (Height - line.Height) / 2; //revisar qué posición Y hay que asignar a cada linea
+                    y += line.Height;
                 }
             }
         }
@@ -1775,12 +1782,12 @@ namespace DOF2DMD
             }
         }
     }
-    class ScrollingUpScene : BackgroundScene
+    class ScrollingUpTextScene : BackgroundScene
     {
         private readonly Group _container;
         private readonly float _length;
 
-        public ScrollingUpScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        public ScrollingUpTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _container = new Group(FlexDMD);
 
@@ -1823,12 +1830,12 @@ namespace DOF2DMD
             }
         }
     }
-    class ScrollingDownScene : BackgroundScene
+    class ScrollingDownTextScene : BackgroundScene
     {
         private readonly Group _container;
         private readonly float _length;
 
-        public ScrollingDownScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        public ScrollingDownTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _container = new Group(FlexDMD);
 
@@ -1871,12 +1878,12 @@ namespace DOF2DMD
             }
         }
     }
-    class ScrollingLeftScene : BackgroundScene
+    class ScrollingLeftTextScene : BackgroundScene
     {
         private readonly Group _container;
         private readonly float _length;
 
-        public ScrollingLeftScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn , float pauseS, AnimationType animateOut , string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        public ScrollingLeftTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn , float pauseS, AnimationType animateOut , string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _container = new Group(FlexDMD);
             
@@ -1921,12 +1928,12 @@ namespace DOF2DMD
             }
         }
     }
-    class ScrollingRightScene : BackgroundScene
+    class ScrollingRightTextScene : BackgroundScene
     {
         private readonly Group _container;
         private readonly float _length;
 
-        public ScrollingRightScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        public ScrollingRightTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _container = new Group(FlexDMD);
             
