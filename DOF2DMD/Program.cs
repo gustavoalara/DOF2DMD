@@ -865,8 +865,7 @@ namespace DOF2DMD
                 "bottom2top" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffUp, name),
                 "scrollup" => new ScrollingUpPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffUp, name),
                 "bottom2bottom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffDown, name),
-                "zoom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ZoomIn, duration, AnimationType.ZoomOut, name),
-                _ => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, name)
+                 _ => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, name)
             };
         }
         /// <summary>
@@ -936,12 +935,28 @@ namespace DOF2DMD
         /// Displays text on the DMD device.
         /// %0A or | for line break
         /// </summary>
-        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, int bordersize, bool cleanbg, string animation, float duration, bool loop, bool toQueue, float wait = 0)
+        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, int bordersize, bool cleanbg, string animation, float duration, bool loop, bool toQueue, float wait = 0, string align = "center")
         {
             try
             {
                 // Convert size to numeric value based on device dimensions
                 size = GetFontSize(size, gDmdDevice.Width, gDmdDevice.Height);
+                var alignmentMap = new Dictionary<string, Alignment>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            {"center", Alignment.Center},
+                            {"right", Alignment.Right},
+                            {"left", Alignment.Left},
+                            {"top", Alignment.Top},
+                            {"bottom", Alignment.Bottom},
+                            {"topright", Alignment.TopRight},
+                            {"topleft", Alignment.TopLeft},
+                            {"bottomright", Alignment.BottomRight},
+                            {"bottomleft", Alignment.BottomLeft}
+                        };
+
+                Alignment alignmentValue = alignmentMap.TryGetValue(align, out var alignment) 
+                    ? alignment
+                    : Alignment.Center; // Default
 
                 _currentDuration = duration;
 
@@ -1017,7 +1032,7 @@ namespace DOF2DMD
                         }
                         
                         // Create background scene based on animation type
-                        BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), labelActor, text, myFont, duration + wait);
+                        BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), labelActor, text, myFont, duration + wait, alignmentValue);
                         _currentScene = bg;
                         _SequenceQueue.Visible = true;
     
@@ -1123,15 +1138,15 @@ namespace DOF2DMD
             return sizeMapping.ContainsKey((width, height)) ? sizeDict["s"] : "8";
         }
 
-        private static BackgroundScene CreateTextBackgroundScene(string animation, Actor currentActor, string text, FlexDMD.Font myFont, float duration)
+        private static BackgroundScene CreateTextBackgroundScene(string animation, Actor currentActor, string text, FlexDMD.Font myFont, float duration, Alignment alignment)
         {
             return animation switch
             {
-                "scrolldown" => new ScrollingDownTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None),
-                "scrollup" => new ScrollingUpTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None),
-                "scrollright" => new ScrollingRightTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None),
-                "scrollleft" => new ScrollingLeftTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None),
-                _ => new NoAnimationTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None)
+                "scrolldown" => new ScrollingDownTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None, alignment),
+                "scrollup" => new ScrollingUpTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None, alignment),
+                "scrollright" => new ScrollingRightTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None, alignment),
+                "scrollleft" => new ScrollingLeftTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None, alignment),
+                _ => new NoAnimationTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None, alignment)
             };
         }
 
@@ -1514,6 +1529,7 @@ namespace DOF2DMD
                                         int bordersize = int.TryParse(query.Get("bordersize"), out int bresult) ? bresult : 0;
                                         string animation = query.Get("animation") ?? "none";
                                         float textwait = float.TryParse(query.Get("wait"), out float twresult) ? twresult : 0.0f;
+                                        string talign = query.Get("align") ?? "center";
                                         float textduration = float.TryParse(query.Get("duration"), out float tresult) ? tresult : 5.0f;
                                         LogIt($"Text is now set to: {text} with size {size}, color {color}, font {font}, border color {bordercolor}, border size {bordersize}, animation {animation} with a duration of {textduration} seconds");
                                         bool tqueue;
@@ -1530,7 +1546,7 @@ namespace DOF2DMD
                                         {
                                             loop = false; // default value if the conversion fails
                                         }
-                                        if (!DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop, tqueue, textwait))
+                                        if (!DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop, tqueue, textwait, talign))
                                         {
                                             sReturn = "Error when displaying text";
                                         }
@@ -1674,13 +1690,14 @@ namespace DOF2DMD
     {
         private readonly Group _container;
         private readonly float _length;
+        private Alignment _alignment;
 
-        public NoAnimationTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        public NoAnimationTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, Alignment alignment = Alignment.Center, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _container = new Group(FlexDMD);
+            _alignment = alignment;
 
             AddActor(_container);
-            var y = 0f;
             string[] lines = text.Split(new char[] { '\n', '|' });
 
             _length = pauseS;
@@ -1694,9 +1711,7 @@ namespace DOF2DMD
                 var txt = line;
                 if (txt.Length == 0) txt = " ";
                 var label = new FlexDMD.Label(flex, font, txt);
-                label.Y = y;
-                y += label.Height;
-                label.Alignment = Alignment.Center;
+                label.Alignment = _alignment;
                 _container.AddActor(label);
             }
         }
@@ -1726,13 +1741,53 @@ namespace DOF2DMD
             if (_container.Width != Width)
             {
                 _container.Width = Width;
+
+                float totalHeight = 0;
                 foreach (Actor line in _container.Children)
                 {
-                    var y = 0f;
-                    //line.X = (Width - line.Width) / 2;
-                    line.Width = Width;
-                    line.Y = y + (Height - line.Height) / 2; //revisar qué posición Y hay que asignar a cada linea
-                    y += line.Height;
+                    if (line is FlexDMD.Label label)
+                    {
+                        totalHeight += label.Height;
+                        label.Width = Width;
+                    }
+                }
+
+                float y = 0;
+                switch (_alignment)
+                {
+                    case Alignment.TopLeft:
+                    case Alignment.Top:
+                    case Alignment.TopRight:
+                        y = 0; // Alineación Top
+                        break;
+                    case Alignment.BottomLeft:
+                    case Alignment.Bottom:
+                    case Alignment.BottomRight:
+                        y = Height - totalHeight; // Alineación Bottom
+                        break;
+                    default: // Alineación Center (o cualquier otra)
+                        if (totalHeight < Height)
+                        {
+                            y = (Height - totalHeight) / 2; // Centrar verticalmente
+                        }
+                        else
+                        {
+                            y = 0; // Mostrar desde la parte superior si hay desbordamiento
+                        }
+                        break;
+                }
+
+                foreach (Actor line in _container.Children)
+                {
+                    if (line is FlexDMD.Label label)
+                    {
+                        label.Y = y;
+                        y += label.Height;
+                        if (y > Height)
+                        {
+                            break; // Detener si se excede la altura del contenedor
+                        }
+                    }
                 }
             }
         }
@@ -1786,16 +1841,21 @@ namespace DOF2DMD
     {
         private readonly Group _container;
         private readonly float _length;
+        private Alignment _alignment;
 
-        public ScrollingUpTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        public ScrollingUpTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, Alignment alignment = Alignment.Center, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _container = new Group(FlexDMD);
-
+            _alignment = alignment;
             AddActor(_container);
             var y = 0f;
             string[] lines = text.Split(new char[] { '\n', '|' });
 
             _length = pauseS;
+            
+            _container.Width = Width;
+            _container.Height = Height;
+            _container.SetPosition(0,0);
             //_length = 3f + lines.Length * 0.2f;
 
             foreach (string line in lines)
@@ -1805,6 +1865,7 @@ namespace DOF2DMD
                 var label = new FlexDMD.Label(flex, font, txt);
                 label.Y = y;
                 y += label.Height;
+                label.Alignment = _alignment;
                 _container.AddActor(label);
             }
             _container.Height = y;
@@ -1825,6 +1886,7 @@ namespace DOF2DMD
                 _container.Width = Width;
                 foreach (Actor line in _container.Children)
                 {
+                    line.Width = Width;
                     line.X = (Width - line.Width) / 2;
                 }
             }
@@ -1834,16 +1896,23 @@ namespace DOF2DMD
     {
         private readonly Group _container;
         private readonly float _length;
+        private Alignment _alignment;
 
-        public ScrollingDownTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        public ScrollingDownTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, Alignment alignment = Alignment.Center, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _container = new Group(FlexDMD);
+            _alignment = alignment;
 
             AddActor(_container);
             var y = 0f;
             string[] lines = text.Split(new char[] { '\n', '|' });
 
             _length = pauseS;
+            
+            _container.Width = Width;
+            _container.Height = Height;
+            _container.SetPosition(0,0);
+
             //_length = 3f + lines.Length * 0.2f;
 
             foreach (string line in lines)
@@ -1853,6 +1922,7 @@ namespace DOF2DMD
                 var label = new FlexDMD.Label(flex, font, txt);
                 label.Y = y;
                 y += label.Height;
+                label.Alignment = _alignment;
                 _container.AddActor(label);
             }
             _container.Height = y;
@@ -1862,7 +1932,7 @@ namespace DOF2DMD
         {
             base.Begin();
             _container.Y = -_container.Height;
-            _tweener.Tween(_container, new { Y = _container.Height * 1.02f }, _length, 0f);
+            _tweener.Tween(_container, new { Y = _container.Height * 1.3f }, _length, 0f);
         }
 
         public override void Update(float delta)
@@ -1873,6 +1943,7 @@ namespace DOF2DMD
                 _container.Width = Width;
                 foreach (Actor line in _container.Children)
                 {
+                    line.Width = Width;
                     line.X = (Width - line.Width) / 2;
                 }
             }
@@ -1882,10 +1953,12 @@ namespace DOF2DMD
     {
         private readonly Group _container;
         private readonly float _length;
+        private Alignment _alignment;
 
-        public ScrollingLeftTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn , float pauseS, AnimationType animateOut , string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        public ScrollingLeftTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn , float pauseS, AnimationType animateOut , Alignment alignment = Alignment.Center, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _container = new Group(FlexDMD);
+            _alignment = alignment;
             
             AddActor(_container);
             var y = 0f;
@@ -1912,7 +1985,7 @@ namespace DOF2DMD
 
             _container.Y = (Height - _container.Height) / 2;
             _container.X = Width;
-            _tweener.Tween(_container, new { X = -(Width + Width*.1) }, _length, 0f);
+            _tweener.Tween(_container, new { X = -(Width * 1.5f) }, _length, 0f);
         }
 
         public override void Update(float delta)
@@ -1921,9 +1994,22 @@ namespace DOF2DMD
             if (_container.Width != Width)
             {
                 _container.Width = Width;
+                switch (_alignment)
+                {
+                    case Alignment.Top:
+                        _container.Y = 0;
+                        break;
+                    case Alignment.Bottom:
+                        _container.Y = Height - _container.Height;
+                        break;
+                    default: // Alignment.Center (o cualquier otra)
+                        _container.Y = (Height - _container.Height) / 2;
+                        break;
+                }
+
                 foreach (Actor line in _container.Children)
                 {
-                    line.X = (Width - line.Width)/2;
+                    line.X = (Width - line.Width) / 2;
                 }
             }
         }
@@ -1932,11 +2018,13 @@ namespace DOF2DMD
     {
         private readonly Group _container;
         private readonly float _length;
+        private Alignment _alignment;
 
-        public ScrollingRightTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        public ScrollingRightTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, Alignment alignment = Alignment.Center, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _container = new Group(FlexDMD);
-            
+            _alignment = alignment;
+
             AddActor(_container);
             var y = 0f;
             string[] lines = text.Split(new char[] { '\n', '|' });
@@ -1961,7 +2049,7 @@ namespace DOF2DMD
             base.Begin();
             _container.Y = (Height - _container.Height) / 2;
             _container.X = -Width;
-            _tweener.Tween(_container, new { X = Width + Width * .1 }, _length, 0f);
+            _tweener.Tween(_container, new { X = Width * 1.5f }, _length, 0f);
         }
 
         public override void Update(float delta)
@@ -1970,6 +2058,19 @@ namespace DOF2DMD
             if (_container.Width != Width)
             {
                 _container.Width = Width;
+                switch (_alignment)
+                {
+                    case Alignment.Top:
+                        _container.Y = 0;
+                        break;
+                    case Alignment.Bottom:
+                        _container.Y = Height - _container.Height;
+                        break;
+                    default: // Alignment.Center (o cualquier otra)
+                        _container.Y = (Height - _container.Height) / 2;
+                        break;
+                }
+
                 foreach (Actor line in _container.Children)
                 {
                     line.X = (Width - line.Width) / 2;
@@ -2103,64 +2204,7 @@ namespace DOF2DMD
             }
         }
     }
-    class ZoomScene : Scene
-{
-    private Actor _image;
-    private float _targetZoomFactor;
-    private float _zoomSpeed;
-    private float _initialImageWidth;
-    private float _initialImageHeight;
 
-    public ZoomScene(IFlexDMD flex, Actor image, float targetZoomFactor, float zoomSpeed, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, animateIn, pauseS, animateOut, id)
-    {
-        _image = image;
-        _targetZoomFactor = targetZoomFactor;
-        _zoomSpeed = zoomSpeed;
-        AddActor(_image);
-    }
-
-    protected override void Begin()
-    {
-        base.Begin();
-
-        // Guardar el tamaño inicial de la imagen
-        _initialImageWidth = _image.Width;
-        _initialImageHeight = _image.Height;
-
-        // Si el tamaño inicial es 0, establecerlo a 1 para evitar divisiones por cero.
-        if (_initialImageWidth == 0) _initialImageWidth = 1;
-        if (_initialImageHeight == 0) _initialImageHeight = 1;
-
-        // Establecer el tamaño inicial de la imagen a 1x1 píxel
-        _image.SetSize(1, 1);
-
-        // Centrar la imagen inicialmente
-        _image.X = (Width - _image.Width) / 2;
-        _image.Y = (Height - _image.Height) / 2;
-    }
-
-    public override void Update(float delta)
-    {
-        base.Update(delta);
-
-        // Calcular el nuevo tamaño de la imagen
-        float newWidth = _image.Width + _zoomSpeed * delta;
-        float newHeight = _image.Height + _zoomSpeed * delta;
-
-        // Limitar el tamaño de la imagen al factor de zoom deseado
-        float targetWidth = Width * _targetZoomFactor;
-        float targetHeight = Height * _targetZoomFactor;
-
-        if (newWidth > targetWidth) newWidth = targetWidth;
-        if (newHeight > targetHeight) newHeight = targetHeight;
-
-        _image.SetSize(newWidth, newHeight);
-
-        // Centrar la imagen en la escena
-        _image.X = (Width - _image.Width) / 2;
-        _image.Y = (Height - _image.Height) / 2;
-    }
-}
     class ScoreBoard : Group
     {
         private readonly FlexDMD.Label[] _scores = new FlexDMD.Label[4];
