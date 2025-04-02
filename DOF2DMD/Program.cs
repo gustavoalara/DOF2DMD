@@ -775,7 +775,7 @@ namespace DOF2DMD
                         //Check the video Loop
                         duration = (videoLoop) ? -1 : duration;
 
-                        BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration, path, xpos, ypos);
+                        BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration, xpos, ypos, path);
                         _currentScene = bg; // Almacenar la referencia a la escena actual
                         _SequenceQueue.Visible = true;
 
