@@ -857,7 +857,7 @@ namespace DOF2DMD
                 "scrollright" => new ScrollingRightPictureScene(gDmdDevice,mediaActor, AnimationType.None, duration, AnimationType.None, name),
                 "left2left" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffLeft, name),
                 "right2left" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, name),
-                "scrollleft" => new ScrollingLeftPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, name),
+                "scrollleft" => new ScrollingLeftPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, xpos, ypos, name),
                 "right2right" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffRight, name),
                 "top2bottom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffDown, name),
                 "scrolldown" => new ScrollingDownPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffDown, name),
@@ -2143,21 +2143,21 @@ namespace DOF2DMD
         private readonly float _length;
         private Actor _background = null;
 
-        public ScrollingLeftPictureScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        public ScrollingLeftPictureScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, int xpos = 0, int ypos = 0, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _background = background;
             if (_background != null) AddActor(_background);
             
             AddActor(_background);
-            var y = 0f;
+            var y = ypos;
             _length = pauseS;
-            _background.Height = y;
+            //_background.Height = y;
         }
 
         protected override void Begin()
         {
             base.Begin();
-            _background.Y = _background.Height;
+            _background.Y = y;
             _background.X = Width;
             _tweener.Tween(_background, new { X = -(Width + Width * .1) }, _length, 0f);
         }
