@@ -847,7 +847,7 @@ namespace DOF2DMD
             }
         }
 
-        private static BackgroundScene CreateBackgroundScene(FlexDMD.FlexDMD gDmdDevice, Actor mediaActor, string animation, float duration, xpos, ypos, string name = "")
+        private static BackgroundScene CreateBackgroundScene(FlexDMD.FlexDMD gDmdDevice, Actor mediaActor, string animation, float duration, int xpos, int ypos, string name = "")
         {
             return animation switch
             {
