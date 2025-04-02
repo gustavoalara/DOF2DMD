@@ -775,7 +775,7 @@ namespace DOF2DMD
                         //Check the video Loop
                         duration = (videoLoop) ? -1 : duration;
 
-                        BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration, path);
+                        BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration, path, xpos, ypos);
                         _currentScene = bg; // Almacenar la referencia a la escena actual
                         _SequenceQueue.Visible = true;
 
@@ -847,7 +847,7 @@ namespace DOF2DMD
             }
         }
 
-        private static BackgroundScene CreateBackgroundScene(FlexDMD.FlexDMD gDmdDevice, Actor mediaActor, string animation, float duration, string name = "")
+        private static BackgroundScene CreateBackgroundScene(FlexDMD.FlexDMD gDmdDevice, Actor mediaActor, string animation, float duration, xpos, ypos, string name = "")
         {
             return animation switch
             {
@@ -2142,6 +2142,7 @@ namespace DOF2DMD
     {
         private readonly float _length;
         private Actor _background = null;
+	private int y;
 
         public ScrollingLeftPictureScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, int xpos = 0, int ypos = 0, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
         {
@@ -2149,7 +2150,7 @@ namespace DOF2DMD
             if (_background != null) AddActor(_background);
             
             AddActor(_background);
-            var y = ypos;
+            y = ypos;
             _length = pauseS;
             //_background.Height = y;
         }
