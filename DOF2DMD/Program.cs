@@ -1156,7 +1156,7 @@ namespace DOF2DMD
         /// Displays text or image with image or with text on the DMD device.
         /// %0A or | for line break
         /// </summary>
-        public static bool AdvancedDisplay(string text, string path, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animationIn, string animationOut, float duration)
+        public static bool AdvancedDisplay(string text, string path, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animationIn, string animationOut, float duration, float afactor = 0.5f)
         {
             try
             {
@@ -1228,7 +1228,7 @@ namespace DOF2DMD
                                                (AnimationType)Enum.Parse(typeof(AnimationType), FormatAnimationInput(animationIn)),
                                                duration,
                                                (AnimationType)Enum.Parse(typeof(AnimationType), FormatAnimationInput(animationOut)),
-                                               "");
+                                               "", afactor);
                     _currentScene = bg;
                     _SequenceQueue.Visible = true;
                     gDmdDevice.Graphics.Clear(Color.Black);
@@ -1561,13 +1561,14 @@ namespace DOF2DMD
                                         string animationOut = query.Get("animationout") ?? "none";
                                         float advtextduration = float.TryParse(query.Get("duration"), out float aresult) ? aresult : 5.0f;
                                         LogIt($"Advanced Text is now set to: {advtext} with size {advsize}, color {advcolor}, font {advfont}, border color {advbordercolor}, border size {advbordersize}, animation In {animationIn}, animation Out {animationOut} with a duration of {advtextduration} seconds");
-                                        bool advcleanbg;
+                                        float aafactor = float.TryParse(query.Get("afactor"), out float aaresult) ? aaresult : 0.5f;
+					bool advcleanbg;
                                         if (!bool.TryParse(query.Get("cleanbg"), out advcleanbg))
                                         {
                                             cleanbg = true; // default value if the conversion fails
                                         }
 
-                                        if (!AdvancedDisplay(advtext, advpath, advsize, advcolor, advfont, advbordercolor, advbordersize, advcleanbg, animationIn, animationOut, advtextduration))
+                                        if (!AdvancedDisplay(advtext, advpath, advsize, advcolor, advfont, advbordercolor, advbordersize, advcleanbg, animationIn, animationOut, advtextduration, aafactor))
                                         {
                                             sReturn = "Error when displaying advanced scene";
                                         }
@@ -1795,7 +1796,7 @@ namespace DOF2DMD
         private readonly Group _container;
         private readonly float _length;
 
-        public AdvancedScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        public AdvancedScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "", float afactor = 0.5f) : base(flex, background, animateIn, pauseS, animateOut, id)
         {
             _container = new Group(FlexDMD);
             
