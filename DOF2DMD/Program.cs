@@ -566,7 +566,7 @@ namespace DOF2DMD
         /// <summary>
         /// Displays an image or video file on the DMD device using native FlexDMD capabilities.
         /// </summary>
-        public static bool DisplayPicture(string path, float duration, string animation, bool toQueue, bool cleanbg, float wait = 0, int xpos = 0, int ypos = 0, string scale = "fit", string align = "center", float playSpeed = 1.0f)    
+        public static bool DisplayPicture(string path, float duration, string animation, bool toQueue, bool cleanbg, float wait = 0, int xpos = 0, int ypos = 0, string scale = "fit", string align = "center", float playSpeed = 1.0f, float afactor = 0.5f)    
         {
             try
             {
@@ -775,7 +775,7 @@ namespace DOF2DMD
                         //Check the video Loop
                         duration = (videoLoop) ? -1 : duration;
 
-                        BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration, xpos, ypos, path);
+                        BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration, xpos, ypos, path, afactor);
                         _currentScene = bg; // Almacenar la referencia a la escena actual
                         _SequenceQueue.Visible = true;
 
@@ -847,25 +847,25 @@ namespace DOF2DMD
             }
         }
 
-        private static BackgroundScene CreateBackgroundScene(FlexDMD.FlexDMD gDmdDevice, Actor mediaActor, string animation, float duration, int xpos, int ypos, string name = "")
+        private static BackgroundScene CreateBackgroundScene(FlexDMD.FlexDMD gDmdDevice, Actor mediaActor, string animation, float duration, int xpos, int ypos, string name = "", float afactor = 0.5f)
         {
             return animation switch
             {
-                "none" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, name),
-                "fade" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.FadeIn, duration, AnimationType.FadeOut, name),
-                "left2right" => new BackgroundScene(gDmdDevice,mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffRight, name),
+                "none" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, name, afactor),
+                "fade" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.FadeIn, duration, AnimationType.FadeOut, name, afactor),
+                "left2right" => new BackgroundScene(gDmdDevice,mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffRight, name, afactor),
                 "scrollright" => new ScrollingRightPictureScene(gDmdDevice,mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffRight, xpos, ypos, name),
-                "left2left" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffLeft, name),
-                "right2left" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, name),
+                "left2left" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffLeft, name, afactor),
+                "right2left" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, name, afactor),
                 "scrollleft" => new ScrollingLeftPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, xpos, ypos, name),
-                "right2right" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffRight, name),
-                "top2bottom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffDown, name),
+                "right2right" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffRight, name, afactor),
+                "top2bottom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffDown, name, afactor),
                 "scrolldown" => new ScrollingDownPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffDown, xpos, ypos,  name),
-                "top2top" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffUp, name),
-                "bottom2top" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffUp, name),
+                "top2top" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffUp, name, afactor),
+                "bottom2top" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffUp, name, afactor),
                 "scrollup" => new ScrollingUpPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffUp, xpos, ypos, name),
-                "bottom2bottom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffDown, name),
-                 _ => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, name)
+                "bottom2bottom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffDown, name, afactor),
+                 _ => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, name, afactor)
             };
         }
         /// <summary>
@@ -1484,6 +1484,7 @@ namespace DOF2DMD
                                         string palign = query.Get("align") ?? "center";
                                         string pscale = query.Get("scale") ?? "fit";
                                         float pplayspeed = float.TryParse(query.Get("playspeed"), out float psresult) ? psresult : 1.0f;
+					float pafactor = float.TryParse(query.Get("afactor"), out float paresult) ? paresult : 0.5f;
                                         bool queue;
                                         // Check if 'queue' exists in the query parameters
                                         queue = dof2dmdUrl.Contains("&queue") || dof2dmdUrl.EndsWith("?queue");
@@ -1674,7 +1675,7 @@ namespace DOF2DMD
             }
         }
 
-        public BackgroundScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "") : base(flex, animateIn, pauseS, animateOut, id)
+        public BackgroundScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "", float afactor = 0.5f) : base(flex, animateIn, pauseS, animateOut, id)
         {
             _background = background;
             if (_background != null) AddActor(_background);
