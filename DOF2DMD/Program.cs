@@ -1513,10 +1513,7 @@ namespace DOF2DMD
                                         {
                                             pcleanbg = true; // default value if the conversion fails
                                         }
-                                        if (!DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg, picturewait,pxpos, pypos, pscale, palign, pplayspeed))
-                                        {
-                                            sReturn = $"Picture or video not found: {picturepath}";
-                                        }
+                                        if (!DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg, picturewait,pxpos, pypos, pscale, palign, pplayspeed, pafactor))
                                         {
                                             sReturn = $"Picture or video not found: {picturepath}";
                                         }
