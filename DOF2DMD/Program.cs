@@ -1673,7 +1673,7 @@ namespace DOF2DMD
             }
         }
 
-        public BackgroundScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "", float afactor = 0.5f) : base(flex, animateIn, pauseS, animateOut, id)
+        public BackgroundScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "", float afactor = 0.5f) : base(flex, animateIn, pauseS, animateOut, id, afactor)
         {
             _background = background;
             if (_background != null) AddActor(_background);
@@ -1796,7 +1796,7 @@ namespace DOF2DMD
         private readonly Group _container;
         private readonly float _length;
 
-        public AdvancedScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "", float afactor = 0.5f) : base(flex, background, animateIn, pauseS, animateOut, id)
+        public AdvancedScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "", float afactor = 0.5f) : base(flex, background, animateIn, pauseS, animateOut, id, afactor)
         {
             _container = new Group(FlexDMD);
             
