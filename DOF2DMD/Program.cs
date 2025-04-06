@@ -112,8 +112,16 @@ namespace DOF2DMD
             public string Bordercolor  { get; set; }
             public int Bordersize  { get; set; }
             public bool Cleanbg  { get; set; }
+            public float Wait  { get; set; }
+            public int Xpos  { get; set; }
+            public int Ypos  { get; set; }
+            public string Scale  { get; set; }
+            public string Align  { get; set; }
+            public float PlaySpeed  { get; set; }
+            public float Pause  { get; set; }
+            public bool Loop  { get; set; }
                 
-            public QueueItem(string path, float duration, string animation, bool cleanbg)
+            public QueueItem(string path, float duration, string animation, bool cleanbg, float wait, int xpos, int ypos, string scale, string align, float playSpeed, float pause)
             {
                 Path = path;
                 Duration = duration;
@@ -125,8 +133,15 @@ namespace DOF2DMD
                 Bordercolor = string.Empty;
                 Bordersize = 0;
                 Cleanbg = cleanbg;
+                Wait = wait;
+                Xpos = xpos;
+                Ypos = ypos;
+                Scale = scale;
+                Align = align;
+                PlaySpeed = playSpeed;
+                Pause = pause;
             }
-            public QueueItem(string text, string size, string color, string font, string bordercolor, int bordersize, float duration, string animation, bool cleanbg)
+            public QueueItem(string text, string size, string color, string font, string bordercolor, int bordersize, bool cleanbg, string animation, float duration, bool loop, float wait, string align, float pause)
             {
                 Path = string.Empty;
                 Text = text;
@@ -138,10 +153,18 @@ namespace DOF2DMD
                 Duration = duration;
                 Animation = animation;
                 Cleanbg = cleanbg;
+                Loop = loop;
+                Wait = wait;
+                Align = align;
+                Pause = pause;
+                Xpos = 0;
+                Ypos = 0;
+                Scale = string.Empty;
+                PlaySpeed = 1.0f;
             }
         }
         private static Queue<QueueItem> _animationQueue = new Queue<QueueItem>();
-        private static float _currentDuration;
+        private static float _totalDuration;
         
         private static Timer _scoreDelayTimer;
 
@@ -349,12 +372,12 @@ namespace DOF2DMD
                     {
                         gDmdDevice.Post(() =>
                         {
-				LogIt($"⏱️ AnimationTimer: Removing expired actor from the scene {scene.Name}");
-				gDmdDevice.Stage.RemoveActor(scene);
-				if (_currentScene == scene)
-				{
-				    _currentScene = null;
-				}
+                            LogIt($"⏱️ AnimationTimer: Removing expired actor from the scene {scene.Name}");
+                            gDmdDevice.Stage.RemoveActor(scene);
+                            if (_currentScene == scene)
+                            {
+                                _currentScene = null;
+                            }
                         });
                     }
                     info.Timer.Dispose();
@@ -383,11 +406,11 @@ namespace DOF2DMD
 
                     if (!string.IsNullOrEmpty(item.Path))
                     {
-                        DisplayPicture(item.Path, item.Duration, item.Animation, false, item.Cleanbg);
+                        DisplayPicture(item.Path, item.Duration, item.Animation, false, item.Cleanbg, item.Wait, item.Xpos, item.Ypos, item.Scale, item.Align, item.PlaySpeed, item.Pause); 
                     }
                     else if (!string.IsNullOrEmpty(item.Text))
                     {
-                        DisplayText(item.Text, item.Size, item.Color, item.Font, item.Bordercolor, item.Bordersize, false, item.Animation, item.Duration, false, item.Cleanbg);
+                        DisplayText(item.Text, item.Size, item.Color, item.Font, item.Bordercolor, item.Bordersize, item.Cleanbg, item.Animation, item.Duration, item.Loop, false, item.Wait, item.Align, item.Pause);
                     }
                 }
                 
@@ -464,7 +487,7 @@ namespace DOF2DMD
                 gCredits = credits;
                 _scoreDelayTimer?.Dispose();
                 // If no ongoing animation or we can display score over it
-                if (_animationTimer == null || sCleanbg == false || _currentDuration == -1)
+                if (_animationTimer == null || sCleanbg == false || _totalDuration == -1)
                 {
                     LogIt($"DisplayScore for player {player}: {score}");
                     DisplayScoreboard(gNbPlayers, player, gScore[1], gScore[2], gScore[3], gScore[4], "", "", sCleanbg);
@@ -566,11 +589,11 @@ namespace DOF2DMD
         /// <summary>
         /// Displays an image or video file on the DMD device using native FlexDMD capabilities.
         /// </summary>
-        public static bool DisplayPicture(string path, float duration, string animation, bool toQueue, bool cleanbg, float wait = 0, int xpos = 0, int ypos = 0, string scale = "fit", string align = "center", float playSpeed = 1.0f, float afactor = 0.5f)    
+        public static bool DisplayPicture(string path, float duration, string animation, bool toQueue, bool cleanbg, float wait = 0f, int xpos = 0, int ypos = 0, string scale = "fit", string align = "center", float playSpeed = 1.0f, float pause = 0f)    
         {
             try
             {
-                _currentDuration = duration;
+                _totalDuration = duration + pause;
                 if (string.IsNullOrEmpty(path))
                     return false;
 
@@ -632,12 +655,12 @@ namespace DOF2DMD
                 // If this picture needs to be queued AND there is an animation/text running BUT current animation/text is not meant to be infinite, 
                 // then add this picture and its parameters to the animation queue. The animation timer will take care of it
                 
-                if (toQueue && (_currentDuration > 0 || _currentDuration == -1))
+                if (toQueue && (_totalDuration > 0 || _totalDuration == -1))
                 {
                     lock (_animationQueueLock)
                     {
                         LogIt($"⏳Queuing {path} for display after current animation");
-                        _animationQueue.Enqueue(new QueueItem(path, duration, animation, cleanbg));
+                        _animationQueue.Enqueue(new QueueItem(path, duration, animation, cleanbg, wait, xpos, ypos, scale, align, playSpeed, pause));
                         LogIt($"⏳Queue has {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => i.Path))}");
                         return true;
                     }
@@ -775,7 +798,7 @@ namespace DOF2DMD
                         //Check the video Loop
                         duration = (videoLoop) ? -1 : duration;
 
-                        BackgroundScene bg = CreateBackgroundScene(gDmdDevice, mediaActor, animation.ToLower(), duration, xpos, ypos, path, afactor);
+                        BackgroundScene bg = CreateBackgroundScene(mediaActor, "", animation.ToLower(), gDmdDevice.NewFont("FlexDMD.Resources.udmd-f6by12.fnt",Color.Black,Color.Black,0), duration, xpos, ypos, path, alignment, pause, "DisplayPicture");
                         _currentScene = bg; // Almacenar la referencia a la escena actual
                         _SequenceQueue.Visible = true;
 
@@ -816,9 +839,10 @@ namespace DOF2DMD
                         }
 
                         // Arm timer once animation is done playing
-                        if (duration >= 0)
+                        if (duration + pause >= 0)
                         {
-                            duration = duration + wait;
+                            if (animation.ToLower() == "fade") pause=+1;
+                            duration = duration + wait + pause * 2f;
                             LogIt($"⏳AnimationTimer: Duration is greater than 0, calling animation timer for {path}");
                             var animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
                             lock (_animationTimers)
@@ -826,6 +850,7 @@ namespace DOF2DMD
                                 _animationTimers.Add(new AnimationTimerInfo(animationTimer, bg));
                             }
                         }
+                        
                     };
 
                     LogIt($"📷Rendering {(isVideo ? $"video (duration: {duration * 1000}ms)" : "image")}: {fullPath}");
@@ -845,28 +870,6 @@ namespace DOF2DMD
                 LogIt($"Error occurred while fetching the image. {ex.Message}");
                 return false;
             }
-        }
-
-        private static BackgroundScene CreateBackgroundScene(FlexDMD.FlexDMD gDmdDevice, Actor mediaActor, string animation, float duration, int xpos, int ypos, string name = "", float afactor = 0.5f)
-        {
-            return animation switch
-            {
-                "none" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, name, afactor),
-                "fade" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.FadeIn, duration, AnimationType.FadeOut, name, afactor),
-                "left2right" => new BackgroundScene(gDmdDevice,mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffRight, name, afactor),
-                "scrollright" => new ScrollingRightPictureScene(gDmdDevice,mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffRight, xpos, ypos, name),
-                "left2left" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnRight, duration, AnimationType.ScrollOffLeft, name, afactor),
-                "right2left" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, name, afactor),
-                "scrollleft" => new ScrollingLeftPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffLeft, xpos, ypos, name),
-                "right2right" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, duration, AnimationType.ScrollOffRight, name, afactor),
-                "top2bottom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffDown, name, afactor),
-                "scrolldown" => new ScrollingDownPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffDown, xpos, ypos,  name),
-                "top2top" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, duration, AnimationType.ScrollOffUp, name, afactor),
-                "bottom2top" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffUp, name, afactor),
-                "scrollup" => new ScrollingUpPictureScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffUp, xpos, ypos, name),
-                "bottom2bottom" => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp, duration, AnimationType.ScrollOffDown, name, afactor),
-                 _ => new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, name, afactor)
-            };
         }
         /// <summary>
         /// Displays Highscores on the DMD device.
@@ -935,7 +938,7 @@ namespace DOF2DMD
         /// Displays text on the DMD device.
         /// %0A or | for line break
         /// </summary>
-        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, int bordersize, bool cleanbg, string animation, float duration, bool loop, bool toQueue, float wait = 0, string align = "center")
+        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, int bordersize, bool cleanbg, string animation, float duration, bool loop, bool toQueue, float wait = 0, string align = "center", float pause = 0f)
         {
             try
             {
@@ -958,7 +961,7 @@ namespace DOF2DMD
                     ? alignment
                     : Alignment.Center; // Default
 
-                _currentDuration = duration;
+                _totalDuration = duration + pause;
 
                 // Check if the font exists
                 string localFontPath = $"resources/{font}_{size}";
@@ -998,15 +1001,16 @@ namespace DOF2DMD
                     // If this text needs to be queued AND there is an animation/text running BUT current animation/text is not meant to be infinite, 
                     // then add this text and its parameters to the animation queue. The animation timer will take care of it
                     
-                    if (toQueue && _currentDuration > 0)
+                    if (toQueue && _totalDuration > 0)
                     {
                         lock (_animationQueueLock)
                         {
                             LogIt($"⏳Queuing {text} for display after current animation");
-                            _animationQueue.Enqueue(new QueueItem(text, size, color, font, bordercolor, bordersize, duration, animation, cleanbg));
+                            _animationQueue.Enqueue(new QueueItem(text, size, color, font, bordercolor, bordersize, cleanbg, animation, duration, loop, wait, align, pause));  
                             LogIt($"⏳Queue has {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => i.Text))}");
                             return;
-                        }
+                            
+                        } 
                     }
                     System.Action displayAction = () =>
                     {
@@ -1025,15 +1029,15 @@ namespace DOF2DMD
                             _loopTimer?.Dispose();
                         }
     
-                        if (duration > 0)
+                        if (_totalDuration > 0)
                         {
                             _animationTimer?.Dispose();
-                            _animationTimer = new Timer(AnimationTimer, null, (int)(duration + wait) * 1000 + 1000, Timeout.Infinite);
+                            _animationTimer = new Timer(AnimationTimer, null, (int)(duration + wait) * 1000 , Timeout.Infinite);
                         }
                         
                         // Create background scene based on animation type
-                        BackgroundScene bg = CreateTextBackgroundScene(animation.ToLower(), labelActor, text, myFont, duration + wait, alignmentValue);
-                        _currentScene = bg;
+                        BackgroundScene bg = CreateBackgroundScene(labelActor, text, animation.ToLower(), myFont, duration, 0, 0, "Text", alignmentValue, pause, "DisplayText");
+                         _currentScene = bg;
                         _SequenceQueue.Visible = true;
     
                         // Add scene to the queue or directly to the stage
@@ -1137,123 +1141,81 @@ namespace DOF2DMD
 
             return sizeMapping.ContainsKey((width, height)) ? sizeDict["s"] : "8";
         }
-
-        private static BackgroundScene CreateTextBackgroundScene(string animation, Actor currentActor, string text, FlexDMD.Font myFont, float duration, Alignment alignment)
+        private static BackgroundScene CreateBackgroundScene(Actor mediaActor, string text, string animation, FlexDMD.Font myFont, float duration, int xpos, int ypos, string name, Alignment alignment, float pause, string calledFrom)
         {
-            return animation switch
+            
+            switch (animation)
             {
-                "scrolldown" => new ScrollingDownTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None, alignment),
-                "scrollup" => new ScrollingUpTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None, alignment),
-                "scrollright" => new ScrollingRightTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None, alignment),
-                "scrollleft" => new ScrollingLeftTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None, alignment),
-                _ => new NoAnimationTextScene(gDmdDevice, currentActor, text, myFont, AnimationType.None, duration, AnimationType.None, alignment)
-            };
-        }
-
-
-
-        /// <summary>
-        /// Displays text or image with image or with text on the DMD device.
-        /// %0A or | for line break
-        /// </summary>
-        public static bool AdvancedDisplay(string text, string path, string size, string color, string font, string bordercolor, string bordersize, bool cleanbg, string animationIn, string animationOut, float duration, float afactor = 0.5f)
-        {
-            try
-            {
-                // Convert size to numeric value based on device dimensions
-                size = GetFontSize(size, gDmdDevice.Width, gDmdDevice.Height);
-
-                //Check if the font exists
-                string localFontPath = $"resources/{font}_{size}";
-                List<string> fontextensions = new List<string> { ".fnt", ".png" };
-
-                if (FileExistsWithExtensions(localFontPath, fontextensions, out string foundPathExtension))
-                {
-                    localFontPath = localFontPath + ".fnt";
-                }
-                else
-                {
-                    localFontPath = $"resources/Consolas_{size}.fnt";
-                    LogIt($"Font not found, using default: {localFontPath}");
-                }
-
-                // Determine if border is needed
-                int border = bordersize != "0" ? 1 : 0;
-
-                var bgActor = new Actor();
-
-                if (!string.IsNullOrEmpty(path))
-                {
-                    
-                    if(!string.IsNullOrEmpty(AppSettings.artworkPath))
-                        path = AppSettings.artworkPath + "/" + path;
-                    string localPath = HttpUtility.UrlDecode(path);
-
-                    List<string> extensions = new List<string> { ".gif", ".avi", ".mp4", ".png", ".jpg", ".bmp", ".apng", ".jpeg" };
-
-                    if (FileExistsWithExtensions(localPath, extensions, out string foundExtension))
-                    {
-                        string fullPath = localPath + foundExtension;
-
-                        List<string> videoExtensions = new List<string> { ".gif", ".avi", ".mp4", ".apng" };
-                        List<string> imageExtensions = new List<string> { ".png", ".jpg", ".bmp", ".jpeg" };
-
-                        if (videoExtensions.Contains(foundExtension.ToLower()))
-                        {
-                            bgActor = (AnimatedActor)gDmdDevice.NewVideo("MyVideo", fullPath);
-                            bgActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
-                        }
-                        else if (imageExtensions.Contains(foundExtension.ToLower()))
-                        {
-                            bgActor = (Actor)gDmdDevice.NewImage("MyImage", fullPath);
-                            bgActor.SetSize(gDmdDevice.Width, gDmdDevice.Height);
-                        }
-                    }
-                }
-
-                gDmdDevice.Post(() =>
-                {
-                    // Create font and label actor
-                    FlexDMD.Font myFont = gDmdDevice.NewFont(localFontPath, HexToColor(color), HexToColor(bordercolor), border);
-                    var labelActor = (Actor)gDmdDevice.NewLabel("MyLabel", myFont, text);
-
-                    if (cleanbg)
-                    {
-                        _SequenceQueue.RemoveAllScenes();
-                        _loopTimer?.Dispose();
-                    }
-
-                    // Create advanced scene
-                    var bg = new AdvancedScene(gDmdDevice, bgActor, text, myFont,
-                                               (AnimationType)Enum.Parse(typeof(AnimationType), FormatAnimationInput(animationIn)),
-                                               duration,
-                                               (AnimationType)Enum.Parse(typeof(AnimationType), FormatAnimationInput(animationOut)),
-                                               "", afactor);
-                    _currentScene = bg;
-                    _SequenceQueue.Visible = true;
-                    gDmdDevice.Graphics.Clear(Color.Black);
-                    _scoreBoard.Visible = false;
-                    _scoreDelayTimer?.Dispose();
-
-                    // Add scene to the queue or directly to the stage
-                    if (cleanbg)
-                    {
-                        _SequenceQueue.Enqueue(bg);
-                        _loopTimer?.Dispose();
-                    }
-                    else
-                    {
-                        gDmdDevice.Stage.AddActor(bg);
-                    }
-                });
-
-                LogIt($"Rendering text: {text}");
-                return true;
+                case "none":
+                    if (calledFrom == "DisplayPicture")
+                        return new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, name, duration);
+                    if (calledFrom == "DisplayText")
+                        return new ScrollingTextScene(gDmdDevice, mediaActor, text, myFont, AnimationType.None, duration, AnimationType.None, alignment, "", 0);
+                    break;
+                case "fade":
+                    if (calledFrom == "DisplayPicture")
+                        return new BackgroundScene(gDmdDevice, mediaActor, AnimationType.FadeIn, pause, AnimationType.FadeOut, name, duration);
+                    if (calledFrom == "DisplayText")
+                        return new ScrollingTextScene(gDmdDevice, mediaActor, text, myFont, AnimationType.FadeIn, pause, AnimationType.FadeOut, alignment, "", duration);
+                    break;
+                case "scrollright":
+                    if (calledFrom == "DisplayPicture")
+                        return new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnRight, pause, AnimationType.ScrollOffRight, name, duration);
+                    if (calledFrom == "DisplayText")
+                        return new ScrollingTextScene(gDmdDevice, mediaActor, text, myFont, AnimationType.ScrollOnRight, pause, AnimationType.ScrollOffRight, alignment, "", duration);
+                    break;
+                case "left2left":
+                    if (calledFrom == "DisplayPicture")
+                        return new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnRight, pause, AnimationType.ScrollOffLeft, name, duration);
+                    if (calledFrom == "DisplayText")
+                        return new ScrollingTextScene(gDmdDevice, mediaActor, text, myFont, AnimationType.ScrollOnRight, pause, AnimationType.ScrollOffLeft, alignment, "", duration);
+                    break;
+                case "scrollleft":
+                    if (calledFrom == "DisplayPicture")
+                        return new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, pause, AnimationType.ScrollOffLeft, name, duration);
+                    if (calledFrom == "DisplayText")
+                        return new ScrollingTextScene(gDmdDevice, mediaActor, text, myFont, AnimationType.ScrollOnLeft, pause, AnimationType.ScrollOffLeft, alignment, "", duration);
+                    break;
+                case "right2right":
+                    if (calledFrom == "DisplayPicture")
+                        return new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnLeft, pause, AnimationType.ScrollOffRight, name, duration);
+                    if (calledFrom == "DisplayText")
+                        return new ScrollingTextScene(gDmdDevice, mediaActor, text, myFont, AnimationType.ScrollOnLeft, pause, AnimationType.ScrollOffRight, alignment, "", duration);
+                    break;
+                case "scrolldown":
+                    if (calledFrom == "DisplayPicture")
+                        return new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, pause, AnimationType.ScrollOffDown, name, duration);
+                    if (calledFrom == "DisplayText")
+                        return new ScrollingTextScene(gDmdDevice, mediaActor, text, myFont, AnimationType.ScrollOnDown, pause, AnimationType.ScrollOffDown, alignment, "", duration);
+                    break;
+                case "top2top":
+                    if (calledFrom == "DisplayPicture")
+                        return new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnDown, pause, AnimationType.ScrollOffUp,name,duration);
+                    if (calledFrom == "DisplayText")
+                        return new ScrollingTextScene(gDmdDevice, mediaActor, text, myFont, AnimationType.ScrollOnDown, pause, AnimationType.ScrollOffUp, alignment, "", duration);
+                    break;
+                case "scrollup":
+                    if (calledFrom == "DisplayPicture")
+                        return new BackgroundScene(gDmdDevice, mediaActor, AnimationType.ScrollOnUp,pause ,AnimationType.ScrollOffUp,name,duration);
+                    if (calledFrom == "DisplayText")
+                        return new ScrollingTextScene(gDmdDevice, mediaActor, text, myFont, AnimationType.ScrollOnUp,pause ,AnimationType.ScrollOffUp,alignment,"",duration);
+                    break;
+                case "bottom2bottom":
+                    if (calledFrom == "DisplayPicture")
+                        return new BackgroundScene(gDmdDevice, mediaActor ,AnimationType.ScrollOnUp,pause ,AnimationType.ScrollOffDown,name,duration);
+                    if (calledFrom == "DisplayText")
+                        return new ScrollingTextScene(gDmdDevice, mediaActor, text, myFont, AnimationType.ScrollOnUp,pause ,AnimationType.ScrollOffDown,alignment,"",duration);
+                    break;
+                default:
+                    if (calledFrom == "DisplayPicture")
+                        return new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, name, duration);
+                    if (calledFrom == "DisplayText")
+                        return new ScrollingTextScene(gDmdDevice, mediaActor, text, myFont, AnimationType.None, duration, AnimationType.None, alignment, "", 0);
+                    break;
             }
-            catch
-            {
-                return false;
-            }
+            LogIt($"Error: Invalid {mediaActor.Name} with animation type {animation} called from {calledFrom} with a duration of {duration} a pause of {pause}, x: {xpos} y: {ypos} or text with {text} using font {myFont}.");
+            return null;
+ 
         }
         /// <summary>
         /// Displays text or image with image or with text on the DMD device.
@@ -1484,7 +1446,7 @@ namespace DOF2DMD
                                         string palign = query.Get("align") ?? "center";
                                         string pscale = query.Get("scale") ?? "fit";
                                         float pplayspeed = float.TryParse(query.Get("playspeed"), out float psresult) ? psresult : 1.0f;
-					float pafactor = float.TryParse(query.Get("afactor"), out float paresult) ? paresult : 0.5f;
+					                    float ppause = float.TryParse(query.Get("pause"), out float ppresult) ? ppresult : 0f;
                                         bool queue;
                                         // Check if 'queue' exists in the query parameters
                                         queue = dof2dmdUrl.Contains("&queue") || dof2dmdUrl.EndsWith("?queue");
@@ -1513,7 +1475,7 @@ namespace DOF2DMD
                                         {
                                             pcleanbg = true; // default value if the conversion fails
                                         }
-                                        if (!DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg, picturewait,pxpos, pypos, pscale, palign, pplayspeed, pafactor))
+                                        if (!DisplayPicture(picturepath, pictureduration, pictureanimation, queue, pcleanbg, picturewait,pxpos, pypos, pscale, palign, pplayspeed, ppause))
                                         {
                                             sReturn = $"Picture or video not found: {picturepath}";
                                         }
@@ -1529,7 +1491,9 @@ namespace DOF2DMD
                                         float textwait = float.TryParse(query.Get("wait"), out float twresult) ? twresult : 0.0f;
                                         string talign = query.Get("align") ?? "center";
                                         float textduration = float.TryParse(query.Get("duration"), out float tresult) ? tresult : 5.0f;
-                                        LogIt($"Text is now set to: {text} with size {size}, color {color}, font {font}, border color {bordercolor}, border size {bordersize}, animation {animation} with a duration of {textduration} seconds");
+                                        float tpause = float.TryParse(query.Get("pause"), out float tpresult) ? tpresult : 0f;
+					                    LogIt($"Text is now set to: {text} with size {size}, color {color}, font {font}, border color {bordercolor}, border size {bordersize}, animation {animation} with a duration of {textduration} seconds and a pause of {tpause} seconds");
+                                        
                                         bool tqueue;
                                         // Check if 'queue' exists in the query parameters
                                         tqueue = dof2dmdUrl.Contains("&queue") || dof2dmdUrl.EndsWith("?queue");
@@ -1544,33 +1508,9 @@ namespace DOF2DMD
                                         {
                                             loop = false; // default value if the conversion fails
                                         }
-                                        if (!DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop, tqueue, textwait, talign))
+                                        if (!DisplayText(text, size, color, font, bordercolor, bordersize, cleanbg, animation, textduration, loop, tqueue, textwait, talign, tpause))
                                         {
                                             sReturn = "Error when displaying text";
-                                        }
-                                        break;
-                                    case "advanced":
-                                        string advtext = query.Get("text") ?? "";
-                                        string advpath = query.Get("path") ?? "";
-                                        string advsize = query.Get("size") ?? "M";
-                                        string advcolor = query.Get("color") ?? "FFFFFF";
-                                        string advfont = query.Get("font") ?? "Consolas";
-                                        string advbordercolor = query.Get("bordercolor") ?? "0000FF";
-                                        string advbordersize = query.Get("bordersize") ?? "0";
-                                        string animationIn = query.Get("animationin") ?? "none";
-                                        string animationOut = query.Get("animationout") ?? "none";
-                                        float advtextduration = float.TryParse(query.Get("duration"), out float aresult) ? aresult : 5.0f;
-                                        LogIt($"Advanced Text is now set to: {advtext} with size {advsize}, color {advcolor}, font {advfont}, border color {advbordercolor}, border size {advbordersize}, animation In {animationIn}, animation Out {animationOut} with a duration of {advtextduration} seconds");
-                                        float aafactor = float.TryParse(query.Get("afactor"), out float aaresult) ? aaresult : 0.5f;
-					bool advcleanbg;
-                                        if (!bool.TryParse(query.Get("cleanbg"), out advcleanbg))
-                                        {
-                                            cleanbg = true; // default value if the conversion fails
-                                        }
-
-                                        if (!AdvancedDisplay(advtext, advpath, advsize, advcolor, advfont, advbordercolor, advbordersize, advcleanbg, animationIn, animationOut, advtextduration, aafactor))
-                                        {
-                                            sReturn = "Error when displaying advanced scene";
                                         }
                                         break;
                                     case "score":
@@ -1673,7 +1613,7 @@ namespace DOF2DMD
             }
         }
 
-        public BackgroundScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "", float afactor = 0.5f) : base(flex, animateIn, pauseS, animateOut, id, afactor)
+        public BackgroundScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "", float afactor = 0f) : base(flex, animateIn, pauseS, animateOut, id, afactor)
         {
             _background = background;
             if (_background != null) AddActor(_background);
@@ -1685,113 +1625,7 @@ namespace DOF2DMD
             _background?.SetSize(Width, Height);
         }
     }
-    class NoAnimationTextScene : BackgroundScene
-    {
-        private readonly Group _container;
-        private readonly float _length;
-        private Alignment _alignment;
-
-        public NoAnimationTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, Alignment alignment = Alignment.Center, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
-        {
-            _container = new Group(FlexDMD);
-            _alignment = alignment;
-
-            AddActor(_container);
-            string[] lines = text.Split(new char[] { '\n', '|' });
-
-            _length = pauseS;
-            
-            _container.Width = Width;
-            _container.Height = Height;
-            _container.SetPosition(0,0);
-            foreach (string line in lines)
-            {
-                //var txt = line.Trim();
-                var txt = line;
-                if (txt.Length == 0) txt = " ";
-                var label = new FlexDMD.Label(flex, font, txt);
-                label.Alignment = _alignment;
-                _container.AddActor(label);
-            }
-        }
-
-        protected override void Begin()
-        {
-            base.Begin();
-            //_container.Y = (Height - _container.Height) / 2;
-            
-            var action1 = new FlexDMD.WaitAction(_length);
-            var action2 = new FlexDMD.ShowAction(_container, false);
-            var sequenceAction = new FlexDMD.SequenceAction();
-            if (_length > -1)
-            {
-                sequenceAction.Add(action1);
-                sequenceAction.Add(action2);
-                
-            _container.AddAction(sequenceAction);
-            }
-            
-
-        }
-
-        public override void Update(float delta)
-        {
-            base.Update(delta);
-            if (_container.Width != Width)
-            {
-                _container.Width = Width;
-
-                float totalHeight = 0;
-                foreach (Actor line in _container.Children)
-                {
-                    if (line is FlexDMD.Label label)
-                    {
-                        totalHeight += label.Height;
-                        label.Width = Width;
-                    }
-                }
-
-                float y = 0;
-                switch (_alignment)
-                {
-                    case Alignment.TopLeft:
-                    case Alignment.Top:
-                    case Alignment.TopRight:
-                        y = 0; // Alineación Top
-                        break;
-                    case Alignment.BottomLeft:
-                    case Alignment.Bottom:
-                    case Alignment.BottomRight:
-                        y = Height - totalHeight; // Alineación Bottom
-                        break;
-                    default: // Alineación Center (o cualquier otra)
-                        if (totalHeight < Height)
-                        {
-                            y = (Height - totalHeight) / 2; // Centrar verticalmente
-                        }
-                        else
-                        {
-                            y = 0; // Mostrar desde la parte superior si hay desbordamiento
-                        }
-                        break;
-                }
-
-                foreach (Actor line in _container.Children)
-                {
-                    if (line is FlexDMD.Label label)
-                    {
-                        label.Y = y;
-                        y += label.Height;
-                        if (y > Height)
-                        {
-                            break; // Detener si se excede la altura del contenedor
-                        }
-                    }
-                }
-            }
-        }
-    }
-    class AdvancedScene : BackgroundScene
+       class AdvancedScene : BackgroundScene
     {
         private readonly Group _container;
         private readonly float _length;
@@ -1804,7 +1638,7 @@ namespace DOF2DMD
             var y = 0f;
             string[] lines = text.Split(new char[] { '\n', '|' });
 
-            _length = pauseS;
+            _length = afactor;
 
             foreach (string line in lines)
             {
@@ -1836,26 +1670,29 @@ namespace DOF2DMD
             }
         }
     }
-    class ScrollingUpTextScene : BackgroundScene
+
+    class ScrollingTextScene : BackgroundScene
     {
         private readonly Group _container;
         private readonly float _length;
-        private Alignment _alignment;
+        private readonly Alignment _alignment;
+        private readonly AnimationType AnimateIn;
+        
 
-        public ScrollingUpTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, Alignment alignment = Alignment.Center, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
+        public ScrollingTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, Alignment alignment = Alignment.Center, string id = "", float afactor = 0.5f) : base(flex, background, animateIn, pauseS, animateOut, id, afactor)
         {
             _container = new Group(FlexDMD);
             _alignment = alignment;
-            AddActor(_container);
+            _length = afactor;
+            AnimateIn = animateIn;
             var y = 0f;
-            string[] lines = text.Split(new char[] { '\n', '|' });
 
-            _length = pauseS;
+            AddActor(_container);
+            string[] lines = text.Split(new char[] { '\n', '|' });
             
             _container.Width = Width;
             _container.Height = Height;
             _container.SetPosition(0,0);
-            //_length = 3f + lines.Length * 0.2f;
 
             foreach (string line in lines)
             {
@@ -1873,8 +1710,37 @@ namespace DOF2DMD
         protected override void Begin()
         {
             base.Begin();
-            _container.Y = Height;
-            _tweener.Tween(_container, new { Y = -_container.Height * 1.02f }, _length, 0f);
+
+            // Lógica para el desplazamiento de entrada (solo si hay desplazamiento)
+            if (AnimateIn == AnimationType.ScrollOnLeft)
+            {
+                _container.X = 0;
+                _container.Y = (Height - _container.Height) / 2;
+            }
+            else if (AnimateIn == AnimationType.ScrollOnRight)
+            {
+                _container.Y = (Height - _container.Height) / 2;
+                _container.X = 0;
+            }
+            else if (AnimateIn == AnimationType.ScrollOnUp)
+            {
+                _container.Y = (Height - _container.Height) / 2; 
+            }
+            else if (AnimateIn == AnimationType.ScrollOnDown)
+            {
+                _container.Y = (Height - _container.Height) / 2;
+            }
+
+            // Lógica para ocultar el texto después de un tiempo
+            if (_length > -1 && AnimateIn == AnimationType.None)
+            {
+                var action1 = new FlexDMD.WaitAction(Pause);
+                var action2 = new FlexDMD.ShowAction(_container, false);
+                var sequenceAction = new FlexDMD.SequenceAction();
+                sequenceAction.Add(action1);
+                sequenceAction.Add(action2);
+                _container.AddAction(sequenceAction);
+            }
         }
 
         public override void Update(float delta)
@@ -1883,333 +1749,75 @@ namespace DOF2DMD
             if (_container.Width != Width)
             {
                 _container.Width = Width;
+                
+                float totalHeight = 0;
                 foreach (Actor line in _container.Children)
                 {
+
                     line.Width = Width;
-                    line.X = (Width - line.Width) / 2;
+                    totalHeight += line.Height;
+                    if (AnimateIn == AnimationType.ScrollOnUp)
+                    {
+                        line.X = (Width - line.Width) / 2;
+                    }
+                    else if (AnimateIn == AnimationType.ScrollOnDown)
+                    {
+                        line.X = (Width - line.Width) / 2;
+                    }
+                    else if (AnimateIn == AnimationType.ScrollOnLeft)
+                    {
+                        line.X = (Width - line.Width) / 2;
+                    }
+                    else if (AnimateIn == AnimationType.ScrollOnRight)
+                    {
+                        line.X = (Width - line.Width) / 2;
+                    }
                 }
-            }
-        }
-    }
-    class ScrollingDownTextScene : BackgroundScene
-    {
-        private readonly Group _container;
-        private readonly float _length;
-        private Alignment _alignment;
-
-        public ScrollingDownTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, Alignment alignment = Alignment.Center, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
-        {
-            _container = new Group(FlexDMD);
-            _alignment = alignment;
-
-            AddActor(_container);
-            var y = 0f;
-            string[] lines = text.Split(new char[] { '\n', '|' });
-
-            _length = pauseS;
-            
-            _container.Width = Width;
-            _container.Height = Height;
-            _container.SetPosition(0,0);
-
-            //_length = 3f + lines.Length * 0.2f;
-
-            foreach (string line in lines)
-            {
-                var txt = line;
-                if (txt.Length == 0) txt = " ";
-                var label = new FlexDMD.Label(flex, font, txt);
-                label.Y = y;
-                y += label.Height;
-                label.Alignment = _alignment;
-                _container.AddActor(label);
-            }
-            _container.Height = y;
-        }
-
-        protected override void Begin()
-        {
-            base.Begin();
-            _container.Y = -_container.Height;
-            _tweener.Tween(_container, new { Y = _container.Height * 1.3f }, _length, 0f);
-        }
-
-        public override void Update(float delta)
-        {
-            base.Update(delta);
-            if (_container.Width != Width)
-            {
-                _container.Width = Width;
-                foreach (Actor line in _container.Children)
-                {
-                    line.Width = Width;
-                    line.X = (Width - line.Width) / 2;
-                }
-            }
-        }
-    }
-    class ScrollingLeftTextScene : BackgroundScene
-    {
-        private readonly Group _container;
-        private readonly float _length;
-        private Alignment _alignment;
-
-        public ScrollingLeftTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn , float pauseS, AnimationType animateOut , Alignment alignment = Alignment.Center, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
-        {
-            _container = new Group(FlexDMD);
-            _alignment = alignment;
-            
-            AddActor(_container);
-            var y = 0f;
-            string[] lines = text.Split(new char[] { '\n', '|' });
-
-            _length = pauseS;
-            //_length = 3f + lines.Length * 0.2f;
-
-            foreach (string line in lines)
-            {
-                var txt = line;
-                if (txt.Length == 0) txt = " ";
-                var label = new FlexDMD.Label(flex, font, txt);
-                label.Y = y;
-                y += label.Height;
-                _container.AddActor(label);
-            }
-            _container.Height = y;
-        }
-
-        protected override void Begin()
-        {
-            base.Begin();
-
-            _container.Y = (Height - _container.Height) / 2;
-            _container.X = Width;
-            _tweener.Tween(_container, new { X = -(Width * 1.5f) }, _length, 0f);
-        }
-
-        public override void Update(float delta)
-        {
-            base.Update(delta);
-            if (_container.Width != Width)
-            {
-                _container.Width = Width;
+                float y = 0;
                 switch (_alignment)
                 {
+                    case Alignment.TopLeft:
                     case Alignment.Top:
-                        _container.Y = 0;
+                    case Alignment.TopRight:
+                        if (AnimateIn == AnimationType.None) y = 0;
+                        if (AnimateIn == AnimationType.ScrollOnRight || AnimateIn == AnimationType.ScrollOnLeft ) _container.Y = 0;
                         break;
+                    case Alignment.BottomLeft:
                     case Alignment.Bottom:
-                        _container.Y = Height - _container.Height;
+                    case Alignment.BottomRight:
+                        if (AnimateIn == AnimationType.None) y = Height - totalHeight;
+                        if (AnimateIn == AnimationType.ScrollOnRight || AnimateIn == AnimationType.ScrollOnLeft ) _container.Y = Height - _container.Height;
                         break;
-                    default: // Alignment.Center (o cualquier otra)
-                        _container.Y = (Height - _container.Height) / 2;
+                    default:
+                        if (AnimateIn == AnimationType.None)
+                        {
+                            if (totalHeight < Height)
+                            {
+                                y = (Height - totalHeight) / 2;
+                            }
+                            else
+                            {
+                                y = 0;
+                            }
+                        }
+                        if (AnimateIn == AnimationType.ScrollOnRight || AnimateIn == AnimationType.ScrollOnLeft ) _container.Y = (Height - _container.Height) / 2;
                         break;
                 }
-
                 foreach (Actor line in _container.Children)
                 {
-                    line.X = (Width - line.Width) / 2;
+                    if (line is FlexDMD.Label label)
+                    {
+                        label.Y = y;
+                        y += label.Height;
+                        if (y > Height)
+                        {
+                            break; // Detener si se excede la altura del contenedor
+                        }
+                    }
                 }
             }
         }
     }
-    class ScrollingRightTextScene : BackgroundScene
-    {
-        private readonly Group _container;
-        private readonly float _length;
-        private Alignment _alignment;
-
-        public ScrollingRightTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, Alignment alignment = Alignment.Center, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
-        {
-            _container = new Group(FlexDMD);
-            _alignment = alignment;
-
-            AddActor(_container);
-            var y = 0f;
-            string[] lines = text.Split(new char[] { '\n', '|' });
-
-            _length = pauseS;
-            //_length = 3f + lines.Length * 0.2f;
-
-            foreach (string line in lines)
-            {
-                var txt = line;
-                if (txt.Length == 0) txt = " ";
-                var label = new FlexDMD.Label(flex, font, txt);
-                label.Y = y;
-                y += label.Height;
-                _container.AddActor(label);
-            }
-            _container.Height = y;
-        }
-
-        protected override void Begin()
-        {
-            base.Begin();
-            _container.Y = (Height - _container.Height) / 2;
-            _container.X = -Width;
-            _tweener.Tween(_container, new { X = Width * 1.5f }, _length, 0f);
-        }
-
-        public override void Update(float delta)
-        {
-            base.Update(delta);
-            if (_container.Width != Width)
-            {
-                _container.Width = Width;
-                switch (_alignment)
-                {
-                    case Alignment.Top:
-                        _container.Y = 0;
-                        break;
-                    case Alignment.Bottom:
-                        _container.Y = Height - _container.Height;
-                        break;
-                    default: // Alignment.Center (o cualquier otra)
-                        _container.Y = (Height - _container.Height) / 2;
-                        break;
-                }
-
-                foreach (Actor line in _container.Children)
-                {
-                    line.X = (Width - line.Width) / 2;
-                }
-            }
-        }
-    }
-    class ScrollingUpPictureScene : BackgroundScene
-    {
-        private readonly float _length;
-        private Actor _background = null;
-        private int x;
-        public ScrollingUpPictureScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, int xpos = 0, int ypos = 0, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
-        {
-            _background = background;
-            if (_background != null) AddActor(_background);
-            x = xpos;
-            AddActor(_background);
-            _length = pauseS;
-        }
-
-        protected override void Begin()
-        {
-            base.Begin();  
-            _background.Y = Height;
-            _background.X = x;
-            _tweener.Tween(_background, new { Y = -Height }, _length, 0f);
-        }
-
-        public override void Update(float delta)
-        {
-            base.Update(delta);
-            if (_background.Width != Width)
-            {
-                _background.Width = Width;
-            }
-        }
-    }
-    class ScrollingDownPictureScene : BackgroundScene
-    {
-        private readonly float _length;
-        private Actor _background = null;
-        private int x;
-        public ScrollingDownPictureScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, int xpos = 0, int ypos = 0, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
-        {
-            _background = background;
-            if (_background != null) AddActor(_background);
-            
-            AddActor(_background);
-            _length = pauseS;
-            x = xpos;
-        }
-
-        protected override void Begin()
-        {
-            base.Begin();
-            _background.Y = -Height;
-            _background.X = x;
-            _tweener.Tween(_background, new { Y = Height }, _length, 0f);
-        }
-
-        public override void Update(float delta)
-        {
-            base.Update(delta);
-            if (_background.Width != Width)
-            {
-                _background.Width = Width;
-            }
-        }
-    }
-    class ScrollingLeftPictureScene : BackgroundScene
-    {
-        private readonly float _length;
-        private Actor _background = null;
-	    private int y;
-
-        public ScrollingLeftPictureScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, int xpos = 0, int ypos = 0, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
-        {
-            _background = background;
-
-            if (_background != null) AddActor(_background);
-            
-            AddActor(_background);
-            y = ypos;
-            _length = pauseS;
-            //_background.Height = y;
-        }
-
-        protected override void Begin()
-        {
-            base.Begin();
-            _background.Y = y;
-            _background.X = Width;
-            _tweener.Tween(_background, new { X = -(Width + Width * .1) }, _length, 0f);
-        }
-
-        public override void Update(float delta)
-        {
-            base.Update(delta);
-            if (_background.Width != Width)
-            {
-                _background.Width = Width;
-            }
-        }
-    }
-    class ScrollingRightPictureScene : BackgroundScene
-    {
-        private readonly float _length;
-        private Actor _background = null;
-        private int y;
-
-        public ScrollingRightPictureScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, int xpos = 0, int ypos = 0, string id = "") : base(flex, background, animateIn, pauseS, animateOut, id)
-        {
-            _background = background;
-            if (_background != null) AddActor(_background);
-            
-            AddActor(_background);
-            y = ypos;
-            _length = pauseS;
-           //_background.Height = y;
-        }
-
-        protected override void Begin()
-        {
-            base.Begin();
-            _background.Y = y;
-            _background.X = -Width;
-            _tweener.Tween(_background, new { X = Width + Width * .1 }, _length, 0f);
-        }
-
-        public override void Update(float delta)
-        {
-            base.Update(delta);
-            if (_background.Width != Width)
-            {
-                _background.Width = Width;
-            }
-        }
-    }
-
     class ScoreBoard : Group
     {
         private readonly FlexDMD.Label[] _scores = new FlexDMD.Label[4];
