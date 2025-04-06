@@ -841,8 +841,7 @@ namespace DOF2DMD
                         // Arm timer once animation is done playing
                         if (duration + pause >= 0)
                         {
-                            if (animation.ToLower() == "fade") pause=+1;
-                            duration = duration + wait + pause * 2f;
+                            duration = duration * 2f + wait + pause;
                             LogIt($"⏳AnimationTimer: Duration is greater than 0, calling animation timer for {path}");
                             var animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
                             lock (_animationTimers)
