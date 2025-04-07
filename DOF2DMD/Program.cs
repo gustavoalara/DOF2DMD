@@ -54,6 +54,7 @@ using FlexDMD.Properties;
 using System.Collections;
 using FuzzySharp;
 using FuzzySharp.SimilarityRatio;
+using System.Security.Cryptography;
 
 namespace DOF2DMD
 {
@@ -360,27 +361,14 @@ namespace DOF2DMD
         private static void AnimationTimer(object state)
         {
             LogIt("⏱️ ⏳AnimationTimer: Starting...");
-            // Verificar y eliminar todas las escenas expiradas
+            // Dispose existing delay timer if any
             List<AnimationTimerInfo> expiredTimers;
             lock (_animationTimersLock)
             {
                 expiredTimers = _animationTimers.Where(info => info.Scene.Time >= info.Scene.Pause).ToList();
                 foreach (var info in expiredTimers)
                 {
-                    var scene = info.Scene;
-                    if (scene != null)
-                    {
-                        gDmdDevice.Post(() =>
-                        {
-                            LogIt($"⏱️ AnimationTimer: Removing expired actor from the scene {scene.Name}");
-                            //Chequear aquí si el actor scene sigue en stage, que puede que la animación lo haya quitado previamente
-			    gDmdDevice.Stage.RemoveActor(scene);
-                            if (_currentScene == scene)
-                            {
-                                _currentScene = null;
-                            }
-                        });
-                    }
+                    LogIt($"⏱️ ⏳AnimationTimer: Animation {info.Scene.Name} is done, removing it from the list");
                     info.Timer.Dispose();
                     _animationTimers.Remove(info);
                 }
@@ -814,11 +802,11 @@ namespace DOF2DMD
                                 var sequenceAction = new FlexDMD.SequenceAction();
                                 sequenceAction.Add(action1);
                                 sequenceAction.Add(action2);
-                                sequenceAction.Add(action3);
-                                    
+                                sequenceAction.Add(action3); 
                                 bg.AddAction(sequenceAction);
                             }
-
+                            
+                            bg.Name = "Sequence " + path; 
                             _SequenceQueue.Enqueue(bg);
                             _loopTimer?.Dispose();
                         }
@@ -838,12 +826,12 @@ namespace DOF2DMD
                             }
                             gDmdDevice.Stage.AddActor(bg);
                         }
-
+                        
                         // Arm timer once animation is done playing
-                        if (duration + pause >= 0)
+                        if (duration  + pause >= 0 )
                         {
-                            duration = duration * 2f + wait + pause;
-                            LogIt($"⏳AnimationTimer: Duration is greater than 0, calling animation timer for {path}");
+                            duration = duration * 1.5f  + wait + pause;
+                            LogIt($"⏳AnimationTimer: Duration is greater than 0, calling animation timer for {bg.Name}");
                             var animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
                             lock (_animationTimers)
                             {
@@ -853,7 +841,7 @@ namespace DOF2DMD
                         
                     };
 
-                    LogIt($"📷Rendering {(isVideo ? $"video (duration: {duration * 1000}ms)" : "image")}: {fullPath}");
+                    LogIt($"📷Rendering {(isVideo ? $"video (duration: {duration * 1000}ms)" : "image")}: {fullPath} (duration: {duration * 1000}ms)");
 
                     // Execute initial action
                     gDmdDevice.LockRenderThread();
@@ -1148,7 +1136,7 @@ namespace DOF2DMD
             {
                 case "none":
                     if (calledFrom == "DisplayPicture")
-                        return new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, name, duration);
+                        return new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, name, 0);
                     if (calledFrom == "DisplayText")
                         return new ScrollingTextScene(gDmdDevice, mediaActor, text, myFont, AnimationType.None, duration, AnimationType.None, alignment, "", 0);
                     break;
@@ -1208,7 +1196,7 @@ namespace DOF2DMD
                     break;
                 default:
                     if (calledFrom == "DisplayPicture")
-                        return new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, name, duration);
+                        return new BackgroundScene(gDmdDevice, mediaActor, AnimationType.None, duration, AnimationType.None, name, 0);
                     if (calledFrom == "DisplayText")
                         return new ScrollingTextScene(gDmdDevice, mediaActor, text, myFont, AnimationType.None, duration, AnimationType.None, alignment, "", 0);
                     break;
@@ -1594,7 +1582,7 @@ namespace DOF2DMD
     class BackgroundScene : Scene
     {
         private Actor _background;
-
+        private float _length;
         public Actor Background
         {
             get => _background;
@@ -1616,75 +1604,43 @@ namespace DOF2DMD
         public BackgroundScene(IFlexDMD flex, Actor background, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "", float afactor = 0f) : base(flex, animateIn, pauseS, animateOut, id, afactor)
         {
             _background = background;
+            _length = afactor;
             if (_background != null) AddActor(_background);
         }
-
         public override void Update(float delta)
         {
             base.Update(delta);
             _background?.SetSize(Width, Height);
         }
-    }
-       class AdvancedScene : BackgroundScene
-    {
-        private readonly Group _container;
-        private readonly float _length;
-
-        public AdvancedScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, string id = "", float afactor = 0.5f) : base(flex, background, animateIn, pauseS, animateOut, id, afactor)
-        {
-            _container = new Group(FlexDMD);
-            
-            AddActor(_container);
-            var y = 0f;
-            string[] lines = text.Split(new char[] { '\n', '|' });
-
-            _length = afactor;
-
-            foreach (string line in lines)
-            {
-                var txt = line;
-                if (txt.Length == 0) txt = " ";
-                var label = new FlexDMD.Label(flex, font, txt);
-                label.Y = y;
-                y += label.Height;
-                label.Alignment = Alignment.Left;
-                _container.AddActor(label);
-            }
-            _container.Height = y;
-        }
         protected override void Begin()
         {
             base.Begin();
-            _container.Y = (Height - _container.Height) / 2;
-        }
-        public override void Update(float delta)
-        {
-            base.Update(delta);
-            if (_container.Width != Width)
+            // Removes background if animation type out is None
+            if (_length > -1 && _animateOut == AnimationType.None)
             {
-                _container.Width = Width;
-                foreach (Actor line in _container.Children)
-                {
-                    line.X = (Width - line.Width) / 2;
-                }
+                if(Pause <0) Pause = 999999f; // Pause is negative, so we set it to a very high value
+                var action1 = new FlexDMD.WaitAction(Pause);
+                var action3 = new FlexDMD.RemoveFromParentAction(_background); 
+                var sequenceAction2 = new FlexDMD.SequenceAction();
+                sequenceAction2.Add(action1);
+                sequenceAction2.Add(action3);
+                _background.AddAction(sequenceAction2);
             }
+            
         }
     }
-
+    
     class ScrollingTextScene : BackgroundScene
     {
         private readonly Group _container;
         private readonly float _length;
         private readonly Alignment _alignment;
-        private readonly AnimationType AnimateIn;
-        
-
+  
         public ScrollingTextScene(IFlexDMD flex, Actor background, string text, FlexDMD.Font font, AnimationType animateIn, float pauseS, AnimationType animateOut, Alignment alignment = Alignment.Center, string id = "", float afactor = 0.5f) : base(flex, background, animateIn, pauseS, animateOut, id, afactor)
         {
             _container = new Group(FlexDMD);
             _alignment = alignment;
             _length = afactor;
-            AnimateIn = animateIn;
             var y = 0f;
 
             AddActor(_container);
@@ -1712,37 +1668,40 @@ namespace DOF2DMD
             base.Begin();
 
             // Lógica para el desplazamiento de entrada (solo si hay desplazamiento)
-            if (AnimateIn == AnimationType.ScrollOnLeft)
+            if (_animateIn == AnimationType.ScrollOnLeft)
             {
                 _container.X = 0;
                 _container.Y = (Height - _container.Height) / 2;
             }
-            else if (AnimateIn == AnimationType.ScrollOnRight)
+            else if (_animateIn == AnimationType.ScrollOnRight)
             {
                 _container.Y = (Height - _container.Height) / 2;
                 _container.X = 0;
             }
-            else if (AnimateIn == AnimationType.ScrollOnUp)
+            else if (_animateIn == AnimationType.ScrollOnUp)
             {
                 _container.Y = (Height - _container.Height) / 2; 
             }
-            else if (AnimateIn == AnimationType.ScrollOnDown)
+            else if (_animateIn == AnimationType.ScrollOnDown)
             {
                 _container.Y = (Height - _container.Height) / 2;
             }
 
             // Lógica para ocultar el texto después de un tiempo
-            if (_length > -1 && AnimateIn == AnimationType.None)
+            
+            
+            if (_length > -1 && _animateOut == AnimationType.None)
             {
                 var action1 = new FlexDMD.WaitAction(Pause);
-                var action2 = new FlexDMD.ShowAction(_container, false);
+                var action2 = new FlexDMD.RemoveFromParentAction(_container);
                 var sequenceAction = new FlexDMD.SequenceAction();
                 sequenceAction.Add(action1);
                 sequenceAction.Add(action2);
                 _container.AddAction(sequenceAction);
             }
+  
         }
-
+        
         public override void Update(float delta)
         {
             base.Update(delta);
@@ -1756,19 +1715,19 @@ namespace DOF2DMD
 
                     line.Width = Width;
                     totalHeight += line.Height;
-                    if (AnimateIn == AnimationType.ScrollOnUp)
+                    if (_animateIn == AnimationType.ScrollOnUp)
                     {
                         line.X = (Width - line.Width) / 2;
                     }
-                    else if (AnimateIn == AnimationType.ScrollOnDown)
+                    else if (_animateIn == AnimationType.ScrollOnDown)
                     {
                         line.X = (Width - line.Width) / 2;
                     }
-                    else if (AnimateIn == AnimationType.ScrollOnLeft)
+                    else if (_animateIn == AnimationType.ScrollOnLeft)
                     {
                         line.X = (Width - line.Width) / 2;
                     }
-                    else if (AnimateIn == AnimationType.ScrollOnRight)
+                    else if (_animateIn == AnimationType.ScrollOnRight)
                     {
                         line.X = (Width - line.Width) / 2;
                     }
@@ -1779,17 +1738,17 @@ namespace DOF2DMD
                     case Alignment.TopLeft:
                     case Alignment.Top:
                     case Alignment.TopRight:
-                        if (AnimateIn == AnimationType.None) y = 0;
-                        if (AnimateIn == AnimationType.ScrollOnRight || AnimateIn == AnimationType.ScrollOnLeft ) _container.Y = 0;
+                        if (_animateIn == AnimationType.None) y = 0;
+                        if (_animateIn == AnimationType.ScrollOnRight || _animateIn == AnimationType.ScrollOnLeft ) _container.Y = 0;
                         break;
                     case Alignment.BottomLeft:
                     case Alignment.Bottom:
                     case Alignment.BottomRight:
-                        if (AnimateIn == AnimationType.None) y = Height - totalHeight;
-                        if (AnimateIn == AnimationType.ScrollOnRight || AnimateIn == AnimationType.ScrollOnLeft ) _container.Y = Height - _container.Height;
+                        if (_animateIn == AnimationType.None) y = Height - totalHeight;
+                        if (_animateIn == AnimationType.ScrollOnRight || _animateIn == AnimationType.ScrollOnLeft ) _container.Y = Height - _container.Height;
                         break;
                     default:
-                        if (AnimateIn == AnimationType.None)
+                        if (_animateIn == AnimationType.None)
                         {
                             if (totalHeight < Height)
                             {
@@ -1800,7 +1759,7 @@ namespace DOF2DMD
                                 y = 0;
                             }
                         }
-                        if (AnimateIn == AnimationType.ScrollOnRight || AnimateIn == AnimationType.ScrollOnLeft ) _container.Y = (Height - _container.Height) / 2;
+                        if (_animateIn == AnimationType.ScrollOnRight || _animateIn == AnimationType.ScrollOnLeft ) _container.Y = (Height - _container.Height) / 2;
                         break;
                 }
                 foreach (Actor line in _container.Children)
