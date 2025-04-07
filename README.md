@@ -96,21 +96,21 @@ There are example aseprite files in [the `ingame.src` folder](/DOF2DMD/artwork/i
 
 DOF2DMD is a server listening to simple http request. Once it has started, you can use the following :
 
-- `[url_prefix]/v1/display/picture?path=<image or video path>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&pause=<seconds>&queue&cleanbg=<true|false>&align=<Center|TopLeft|Top|TopRight|Left|Right|BottomLeft|BottomRight>&scale=<None|Fit|Strech|Fill|FillX|FillY|StretchX|StretchY>&wait=<seconds>`  
+- `[url_prefix]/v1/display/picture?path=<image or video path>&animation=<fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&pause=<seconds>&queue&cleanbg=<true|false>&align=<Center|TopLeft|Top|TopRight|Left|Right|BottomLeft|BottomRight>&scale=<None|Fit|Strech|Fill|FillX|FillY|StretchX|StretchY>&wait=<seconds>&xpos=[x]&ypos[y]&playspeed=<speed>`  
   Display an image, gif/apng animation or video.
   - **path**: The file path of the image or video to be displayed
   - **duration**:
     - 0: picture will be displayed indefinitely, and animation will be displayed for the duration of the video or animation. 
     - >0: picture or animation will be displayed for the specified time in seconds
     - <0: picture or animation will be looped indefinitely
-  - **animation**: The animation applied to the scene: fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|Right2Right|Right2Left|Left2Left|Left2Right|Top2Top|Top2Bottom|Bottom2Bottom|Bottom2Top|None
+  - **animation**: The animation applied to the scene (Default none): fade|ScrollRight|ScrollLeft|ScrollUp|ScrollDown|Right2Right|Right2Left|Left2Left|Left2Right|Top2Top|Top2Bottom|Bottom2Bottom|Bottom2Top|None
     - The "Scroll[direction>" animations are smooth scrolls in the specified direction, with a total duration equal to the "duration" parameter
     - The "[direction2direction]" animations smooth move the image from the specified direction to the specified direction, with a total duration equal to the "duration" parameter.
   - **queue**: If present, the image will be queued to be displayed after the current image is finished. If not present, the current image will be replaced immediately by the new one
-  - **cleanbg**: Cleans the active screen (when not cleaned the picture will showed over the current image/animation/text on the DMD)
-  - **pause**: Pauses the picture on the screen during an animation (between the in an out direction of the animation)
-  - **align**: Aligns the image on the DMD (if it doesn't fit the whole panel) <Center|TopLeft|Top|TopRight|Left|Right|BottomLeft|BottomRight>
-  - **scale**: Scales the picture on the DMD.
+  - **cleanbg**: Cleans the active screen (when not cleaned the picture will showed over the current image/animation/text on the DMD). Default true
+  - **pause**: Pauses the picture on the screen during an animation (between the in an out direction of the animation). Default 0
+  - **align**: Aligns the image on the DMD (if it doesn't fit the whole panel). Default Center. <Center|TopLeft|Top|TopRight|Left|Right|BottomLeft|BottomRight>
+  - **scale**: Scales the picture on the DMD. Default Fit
     - none: Keeps the original size of the image
     - fit: Fits the image size to the DMD while maintaining its aspect ratio. 
     - stretch: Stretchs the image size to the DMD whithout maintaining its aspect ratio.
@@ -119,10 +119,10 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
     - filly: Fills the DMD with the image on vertical
     - stretchx: Stretchs the image to the DMD on horizontal
     - stretchy: Stretchs the image to the DMD on vertical
-  - **wait**: waits until the image is about to be displayed on the screen
-  - **posx**: X pos of the picture on the DMD (if it doesn't fill the whole panel)
-  - **posy**: X pos of the picture on the DMD (if it doesn't fill the whole panel)
-  - **playspeed**: On animated gif/png or videos change the speed of the animation
+  - **wait**: waits until the image is about to be displayed on the screen. Default 0
+  - **xpos**: X pos of the picture on the DMD (if it doesn't fill the whole panel). Default 0
+  - **ypos**: X pos of the picture on the DMD (if it doesn't fill the whole panel). Default 0
+  - **playspeed**: On animated gif/png or videos change the speed of the animation. Default 1
     
 - `[url_prefix]/v1/display/score?players=<number of players>&player=<active player>&score=<score>&cleanbg=<true|false>`  
   Display a score board using a layout from 1 to 4 players and credits**
@@ -148,11 +148,11 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
     - The "Scroll[direction>" animations are smooth scrolls in the specified direction, with a total duration equal to the "duration" parameter
     - The "[direction2direction]" animations smooth move the image from the specified direction to the specified direction, with a total duration equal to the "duration" parameter.
   - **duration**: time to present the text in the DMD (If an animation is selected, the screen will remain black once the animation ends if the time is longer than the animation itself. If the time is -1 in none text animation, it will be permanent, using -1 in another animation presents a black screen)
-  - **loop**: enable text scroll infinite loop
+  - **loop**: enable text scroll infinite loop. Default false
   - **queue**: If present, the text will be queued to be displayed after the current object on DMD is finished. If not present, the current object in the DMD will be replaced immediately by the new text
-  - **pause**: Pauses the text on the screen during an animation (between the in an out direction of the animation)
-  - **align**: Aligns the text on the DMD (if it doesn't fit the whole panel) <Center|TopLeft|Top|TopRight|Left|Right|BottomLeft|BottomRight>
-  - **wait**: waits until the image is about to be displayed on the screen
+  - **pause**: Pauses the text on the screen during an animation (between the in an out direction of the animation). Default 0
+  - **align**: Aligns the text on the DMD (if it doesn't fit the whole panel). Default Center. <Center|TopLeft|Top|TopRight|Left|Right|BottomLeft|BottomRight>
+  - **wait**: waits until the image is about to be displayed on the screen. Default 0
 
 - `[url_prefix]/v1/display/highscores?game=<gamename>?size=XS|S|M|L|XL&color=<hex color>&font=<font>&bordercolor=<hex color>&bordersize=<0|1>&cleanbg=<true|false>&animation=<ScrollRight|ScrollLeft|ScrollUp|ScrollDown|None>&duration=<seconds>&loop=<true|false>&queue`  
   Display scrolling highscores using MAME Highscores plugin 
