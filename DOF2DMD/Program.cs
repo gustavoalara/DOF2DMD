@@ -361,28 +361,38 @@ namespace DOF2DMD
         private static void AnimationTimer(object state)
         {
             LogIt("⏱️ ⏳AnimationTimer: Starting...");
-            // Dispose existing delay timer if any
-            List<AnimationTimerInfo> expiredTimers;
-            lock (_animationTimersLock)
-            {
-                expiredTimers = _animationTimers.Where(info => info.Scene.Time >= info.Scene.Pause).ToList();
-                foreach (var info in expiredTimers)
-                {
-                    LogIt($"⏱️ ⏳AnimationTimer: Animation {info.Scene.Name} is done, removing it from the list");
-                    info.Timer.Dispose();
-                    _animationTimers.Remove(info);
-                }
-                
+    List<AnimationTimerInfo> expiredWaitTimers = new List<AnimationTimerInfo>();
+    List<AnimationTimerInfo> expiredQueueTimers = new List<AnimationTimerInfo>();
+    lock (_animationTimersLock)
+    {
+        // Separar temporizadores de wait y queue
+        expiredWaitTimers = _animationTimers.Where(info => info.Scene == null).ToList();
+        expiredQueueTimers = _animationTimers.Where(info => info.Scene != null && info.Scene.Time >= info.Scene.Pause).ToList();
 
-                var localAnimationTimer = _animationTimers.ToList();
-                var localQueue = _animationQueue.ToList();
+        // Procesar temporizadores de wait
+        foreach (var info in expiredWaitTimers)
+        {
+            LogIt($"⏱️ ⏳AnimationTimer: Wait Timer is done, removing it from the list");
+            info.Timer.Dispose();
+            _animationTimers.Remove(info);
+        }
 
-               
-                // Verify if there are more animations on the queue						   
-                if (localQueue.Count > 0 && localAnimationTimer.Count == 0)
-                {
-                    QueueItem item;
-                    item = _animationQueue.Dequeue();
+        // Procesar temporizadores de queue
+        foreach (var info in expiredQueueTimers)
+        {
+            LogIt($"⏱️ ⏳AnimationTimer: Animation {info.Scene.Name} is done, removing it from the list");
+            info.Timer.Dispose();
+            _animationTimers.Remove(info);
+        }
+
+        var localQueue = _animationQueue.ToList();
+        var localAnimationTimer = _animationTimers.Where(info => info.Scene != null).ToList();
+
+        // Procesar la cola si no hay temporizadores de wait activos
+        if (localQueue.Count > 0 && _animationTimers.Count(info => info.Scene == null) == 0) // Cambio importante: procesar si no hay timers wait
+        {
+            QueueItem item;
+            item = _animationQueue.Dequeue();
 			
                     if (!string.IsNullOrEmpty(item.Path))
                     {
@@ -654,6 +664,22 @@ namespace DOF2DMD
                         return true;
                     }
                 }
+                if (wait > 0)
+                {
+                    lock (_animationQueueLock)
+                    {
+                        LogIt($"⏳Queuing {path} for display after {wait} seconds wait");
+                        _animationQueue.Enqueue(new QueueItem(path, duration, animation, cleanbg, 0, xpos, ypos, scale, align, playSpeed, pause));
+                        LogIt($"⏳Queue has {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => i.Path))}");
+                    }
+                    // Crear un temporizador para esperar el tiempo de espera.
+                    var animationTimer = new Timer(AnimationTimer, null, (int)wait * 1000, Timeout.Infinite);
+                    lock (_animationTimers)
+                    {
+                        _animationTimers.Add(new AnimationTimerInfo(animationTimer, null)); // Usar null para indicar que este temporizador es para wait.
+                    }
+                    return true;
+                }
                 // Now that we've validated everything, process the display asynchronously
                 _ = Task.Run(() =>
                 {
@@ -793,44 +819,20 @@ namespace DOF2DMD
 
                         // Add scene to the queue or directly to the stage
                         if (cleanbg)
-                        {
-                            if (wait > 0)
-                            {
-                                var action1 = new FlexDMD.ShowAction(bg, false);
-                                var action2 = new FlexDMD.WaitAction(wait);
-                                var action3 = new FlexDMD.ShowAction(bg, true);
-                                var sequenceAction = new FlexDMD.SequenceAction();
-                                sequenceAction.Add(action1);
-                                sequenceAction.Add(action2);
-                                sequenceAction.Add(action3); 
-                                bg.AddAction(sequenceAction);
-                            }
-                            
+                        {                     
                             bg.Name = "Sequence " + path; 
                             _SequenceQueue.Enqueue(bg);
                             _loopTimer?.Dispose();
                         }
                         else
                         {
-                            if (wait > 0)
-                            {
-                                var action1 = new FlexDMD.ShowAction(bg, false);
-                                var action2 = new FlexDMD.WaitAction(wait);
-                                var action3 = new FlexDMD.ShowAction(bg, true);
-                                var sequenceAction = new FlexDMD.SequenceAction();
-                                sequenceAction.Add(action1);
-                                sequenceAction.Add(action2);
-                                sequenceAction.Add(action3);
-                                
-                                bg.AddAction(sequenceAction);
-                            }
                             gDmdDevice.Stage.AddActor(bg);
                         }
                         
                         // Arm timer once animation is done playing
                         if (duration  + pause >= 0 )
                         {
-                            duration = duration * 1.5f  + wait + pause;
+                            duration = duration * 1.5f  + pause;
                             LogIt($"⏳AnimationTimer: Duration is greater than 0, calling animation timer for {bg.Name}");
                             var animationTimer = new Timer(AnimationTimer, null, (int)duration * 1000 + 1000, Timeout.Infinite);
                             lock (_animationTimers)
@@ -926,7 +928,7 @@ namespace DOF2DMD
         /// Displays text on the DMD device.
         /// %0A or | for line break
         /// </summary>
-        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, int bordersize, bool cleanbg, string animation, float duration, bool loop, bool toQueue, float wait = 0, string align = "center", float pause = 0f)
+        public static bool DisplayText(string text, string size, string color, string font, string bordercolor, int bordersize, bool cleanbg, string animation, float duration, bool loop, bool toQueue, float wait = 0f, string align = "center", float pause = 0f)
         {
             try
             {
@@ -1000,6 +1002,23 @@ namespace DOF2DMD
                             
                         } 
                     }
+                    
+                    if (wait > 0)
+                    {
+                        lock (_animationQueueLock)
+                        {
+                            LogIt($"⏳Queuing {text} for display after {wait} seconds wait");
+                            _animationQueue.Enqueue(new QueueItem(text, size, color, font, bordercolor, bordersize, cleanbg, animation, duration, loop, 0, align, pause));  
+                            LogIt($"⏳Queue has {_animationQueue.Count} items: {string.Join(", ", _animationQueue.Select(i => i.Text))}");
+                        }
+                        // Crear un temporizador para esperar el tiempo de espera.
+                        var animationTimer = new Timer(AnimationTimer, null, (int)wait * 1000, Timeout.Infinite);
+                        lock (_animationTimers)
+                        {
+                            _animationTimers.Add(new AnimationTimerInfo(animationTimer, null)); // Usar null para indicar que este temporizador es para wait.
+                        }
+                        return;
+                    }
                     System.Action displayAction = () =>
                     {
                         // Create font and label actor
@@ -1020,7 +1039,7 @@ namespace DOF2DMD
                         if (_totalDuration > 0)
                         {
                             _animationTimer?.Dispose();
-                            _animationTimer = new Timer(AnimationTimer, null, (int)(duration + wait) * 1000 , Timeout.Infinite);
+                            _animationTimer = new Timer(AnimationTimer, null, (int)(duration) * 1000 , Timeout.Infinite);
                         }
                         
                         // Create background scene based on animation type
@@ -1031,36 +1050,11 @@ namespace DOF2DMD
                         // Add scene to the queue or directly to the stage
                         if (cleanbg)
                         {
-                            if (wait > 0)
-                            {
-                                var action1 = new FlexDMD.ShowAction(bg, false);
-                                var action2 = new FlexDMD.WaitAction(wait);
-                                var action3 = new FlexDMD.ShowAction(bg, true);
-                                var sequenceAction = new FlexDMD.SequenceAction();
-                                sequenceAction.Add(action1);
-                                sequenceAction.Add(action2);
-                                sequenceAction.Add(action3);
-                                    
-                                bg.AddAction(sequenceAction);
-                            }
-
                             _SequenceQueue.Enqueue(bg);
                             _loopTimer?.Dispose();
                         }
                         else
                         {
-                            if (wait > 0)
-                            {
-                                var action1 = new FlexDMD.ShowAction(bg, false);
-                                var action2 = new FlexDMD.WaitAction(wait);
-                                var action3 = new FlexDMD.ShowAction(bg, true);
-                                var sequenceAction = new FlexDMD.SequenceAction();
-                                sequenceAction.Add(action1);
-                                sequenceAction.Add(action2);
-                                sequenceAction.Add(action3);
-                                
-                                bg.AddAction(sequenceAction);
-                            }
                             gDmdDevice.Stage.AddActor(bg);
                         }
 
@@ -1611,6 +1605,10 @@ namespace DOF2DMD
         {
             base.Update(delta);
             _background?.SetSize(Width, Height);
+            if (IsFinished())
+            {
+                      FlexDMD.Stage.RemoveActor(this);
+            }
         }
         protected override void Begin()
         {
@@ -1626,7 +1624,7 @@ namespace DOF2DMD
                 sequenceAction2.Add(action3);
                 _background.AddAction(sequenceAction2);
             }
-            
+                        
         }
     }
     
@@ -1668,23 +1666,14 @@ namespace DOF2DMD
             base.Begin();
 
             // Lógica para el desplazamiento de entrada (solo si hay desplazamiento)
-            if (_animateIn == AnimationType.ScrollOnLeft)
+            if (_animateIn == AnimationType.ScrollOnLeft || _animateIn == AnimationType.ScrollOnRight || _animateIn == AnimationType.ScrollOffLeft || _animateIn == AnimationType.ScrollOffRight)
             {
                 _container.X = 0;
                 _container.Y = (Height - _container.Height) / 2;
             }
-            else if (_animateIn == AnimationType.ScrollOnRight)
-            {
-                _container.Y = (Height - _container.Height) / 2;
-                _container.X = 0;
-            }
-            else if (_animateIn == AnimationType.ScrollOnUp)
+            else if (_animateIn == AnimationType.ScrollOnUp || _animateIn == AnimationType.ScrollOnDown || _animateIn == AnimationType.ScrollOffUp || _animateIn == AnimationType.ScrollOffDown)
             {
                 _container.Y = (Height - _container.Height) / 2; 
-            }
-            else if (_animateIn == AnimationType.ScrollOnDown)
-            {
-                _container.Y = (Height - _container.Height) / 2;
             }
 
             // Lógica para ocultar el texto después de un tiempo
@@ -1715,22 +1704,7 @@ namespace DOF2DMD
 
                     line.Width = Width;
                     totalHeight += line.Height;
-                    if (_animateIn == AnimationType.ScrollOnUp)
-                    {
-                        line.X = (Width - line.Width) / 2;
-                    }
-                    else if (_animateIn == AnimationType.ScrollOnDown)
-                    {
-                        line.X = (Width - line.Width) / 2;
-                    }
-                    else if (_animateIn == AnimationType.ScrollOnLeft)
-                    {
-                        line.X = (Width - line.Width) / 2;
-                    }
-                    else if (_animateIn == AnimationType.ScrollOnRight)
-                    {
-                        line.X = (Width - line.Width) / 2;
-                    }
+                    line.X = (Width - line.Width) / 2;
                 }
                 float y = 0;
                 switch (_alignment)
@@ -1738,17 +1712,17 @@ namespace DOF2DMD
                     case Alignment.TopLeft:
                     case Alignment.Top:
                     case Alignment.TopRight:
-                        if (_animateIn == AnimationType.None) y = 0;
+                        if (_animateIn == AnimationType.None || _animateIn == AnimationType.FadeIn) y = 0;
                         if (_animateIn == AnimationType.ScrollOnRight || _animateIn == AnimationType.ScrollOnLeft ) _container.Y = 0;
                         break;
                     case Alignment.BottomLeft:
                     case Alignment.Bottom:
                     case Alignment.BottomRight:
-                        if (_animateIn == AnimationType.None) y = Height - totalHeight;
+                        if (_animateIn == AnimationType.None || _animateIn == AnimationType.FadeIn) y = Height - totalHeight;
                         if (_animateIn == AnimationType.ScrollOnRight || _animateIn == AnimationType.ScrollOnLeft ) _container.Y = Height - _container.Height;
                         break;
                     default:
-                        if (_animateIn == AnimationType.None)
+                        if (_animateIn == AnimationType.None || _animateIn == AnimationType.FadeIn)
                         {
                             if (totalHeight < Height)
                             {
