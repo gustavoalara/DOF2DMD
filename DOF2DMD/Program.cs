@@ -1605,7 +1605,7 @@ namespace DOF2DMD
         {
             base.Update(delta);
             _background?.SetSize(Width, Height);
-            if (IsFinished())
+            if (IsFinished() && !(_animateOut == AnimationType.None || _animateOut == AnimationType.FadeOut))
             {
                       FlexDMD.Stage.RemoveActor(this);
             }
@@ -1614,7 +1614,7 @@ namespace DOF2DMD
         {
             base.Begin();
             // Removes background if animation type out is None
-            if (_length > -1 && _animateOut == AnimationType.None)
+            if (_length > -1 && (_animateOut == AnimationType.None || _animateOut == AnimationType.FadeOut))
             {
                 if(Pause <0) Pause = 999999f; // Pause is negative, so we set it to a very high value
                 var action1 = new FlexDMD.WaitAction(Pause);
