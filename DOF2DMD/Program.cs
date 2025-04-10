@@ -707,7 +707,12 @@ namespace DOF2DMD
                             if (cleanbg && !toQueue)
                             {
                                 _SequenceQueue.RemoveAllScenes();
+                                _animationQueue.Clear();
                                 gDmdDevice.Graphics.Clear(Color.Black);
+                                gDmdDevice.Stage.RemoveAll();
+                                gDmdDevice.Stage.AddActor(_SequenceQueue);
+                                gDmdDevice.Stage.AddActor(_scoreBoard);
+                                _scoreBoard.Visible = false;
                                 _loopTimer?.Dispose();
                                 lock (_animationQueueLock)
                                 {
@@ -1032,7 +1037,15 @@ namespace DOF2DMD
 
                         if (cleanbg)
                         {
+
+
                             _SequenceQueue.RemoveAllScenes();
+                            _animationQueue.Clear();
+                            gDmdDevice.Graphics.Clear(Color.Black);
+                            gDmdDevice.Stage.RemoveAll();
+                            gDmdDevice.Stage.AddActor(_SequenceQueue);
+                            gDmdDevice.Stage.AddActor(_scoreBoard);
+                            _scoreBoard.Visible = false;
                             _loopTimer?.Dispose();
                         }
     
