@@ -171,6 +171,7 @@ namespace DOF2DMD
 
         static async Task Main()
         {
+	    Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
             // Set up logging to a file
             Console.OutputEncoding = Encoding.UTF8;
             Trace.Listeners.Add(new TextWriterTraceListener("dof2dmd.log") { TraceOutputOptions = TraceOptions.Timestamp });
