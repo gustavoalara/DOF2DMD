@@ -287,7 +287,8 @@ namespace DOF2DMD
             static AppSettings()
             {
                 var builder = new ConfigurationBuilder();
-                builder.SetBasePath(Directory.GetCurrentDirectory());
+                //builder.SetBasePath(Directory.GetCurrentDirectory());
+		builder.SetBasePath(AppDomain.CurrentDomain.BaseDirectory);
                 builder.AddIniFile("settings.ini", optional: true, reloadOnChange: true);
 
                 _configuration = builder.Build();
