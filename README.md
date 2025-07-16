@@ -69,7 +69,8 @@ uses [Freezy DMD extensions](https://github.com/freezy/dmd-extensions)
 - You should see the DOF2DMD logo, either on a Virtual DMD, or real DMD if you have configured `DmdDevice.ini`
 - If using DOFLinx for MAME
   - Install [DOFLinx](https://www.vpforums.org/index.php?showforum=104) - see [DOFLinx setup for DOF2DMD](#use-in-doflinx)
-  - Get [modified MAME version](https://drive.google.com/drive/folders/1AjJ8EQo3AkmG2mw7w0fLzF9HcOjFoUZH)
+  - Get [latest MAME version](https://www.mamedev.org/release.html)
+  - Copy DOFLinx plugin from DOFLinx\DOFLinx Mame Integration to your MAME\Plugins folder and enable the plugin in MAME
   - Launch DOFLinx (should be at startup if you are on an Arcade cabinet).
   - Launch your MAME game. The modified version of MAME will communicate with
     DOFLinx, which in turn will trigger API calls to DOF2DMD.
@@ -184,7 +185,7 @@ DOF2DMD is a server listening to simple http request. Once it has started, you c
 ![hiscores](hiscores.gif)
 
 
-DOF2DMD now has the ability to display the MAME high score list as well. To enable this, MAME must have the Highscores plugin activated, and Hi2txt (https://greatstoneex.github.io/hi2txt-doc/) must be installed.  
+DOF2DMD now has the ability to display the MAME high score list as well directly without DOFLinx too. To enable this, MAME must have the Highscores plugin activated, and Hi2txt (https://greatstoneex.github.io/hi2txt-doc/) must be installed.  
 If you want to use this feature, you need to enable it in *settings.ini*, specify the path to your MAME installation, and provide the path to the *hi2txt* executable, as shown below:
 
 ```ini
@@ -210,7 +211,7 @@ Here is a minimal DOFLinx.ini file which will work with `DOF2DMD`:
 COLOUR_FILE=<DOFLinx path>\config\colours.ini
 DIRECTOUTPUTGLOBAL=<DOFLinx path>\config\GlobalConfig_b2sserver.xml
 PATH_MAME=<DOFLinx path>\MAME\
-MAME_FOLDER=<MAME executable path (note: it must be DOFLinx modified MAME version)>
+MAME_FOLDER=<MAME executable path (note: it must be using the DOFLinx plugin)>
 
 # When to activate, and more specifically what is the MAME process to kick things off
 PROCESSES=Mame64
@@ -218,12 +219,11 @@ MAME_PROCESS=Mame64
 
 # DOF2DMD
 PATH_DOF2DMD=<location of DOF2DMD executable and settings.ini>
+DOF2DMD_GAME_START_HIGHSCORE=0/1 #Show MAME Highscores when the game starts
+DOF2DMD_MENU_HIGHSCORE=0/1 #Show MAME Highscore during the Menu selection
+DOF2DMD_SHOW_NO_SCORE=0/1 #Disable/Enable scores showing during the game
 ```
 
-Note:
-
-- `PATH_DOF2DMD`: the location of DOF2DMD executable and settings.ini
-- `MAME_FOLDER`: MAME executable path which must be DOFLinx's [modified version of MAME](https://drive.google.com/drive/folders/1AjJ8EQo3AkmG2mw7w0fLzF9HcOjFoUZH)
 
 ### Embedded commands
 
