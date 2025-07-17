@@ -383,7 +383,20 @@ namespace DOF2DMD
             info.Timer.Dispose();
             _animationTimers.Remove(info);
         }
-
+	// Detectar animaciones infinitas y permitir que la cola avance
+	if (_animationQueue.Count > 0)
+	{
+	    var infiniteTimers = _animationTimers
+	        .Where(info => info.Scene != null && info.Scene.Pause < 0)
+	        .ToList();
+	
+	    foreach (var info in infiniteTimers)
+	    {
+	        LogIt($"⏱️ ⏳AnimationTimer: Forcing end of infinite animation {info.Scene.Name} to allow next in queue");
+	        info.Timer.Dispose();
+	        _animationTimers.Remove(info);
+	    }
+	}
         var localQueue = _animationQueue.ToList();
         var localAnimationTimer = _animationTimers.Where(info => info.Scene != null).ToList();
 
